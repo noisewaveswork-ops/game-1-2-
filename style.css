@@ -12,14 +12,14 @@ body {
     height: 100vh;
     font-family: 'Arial', sans-serif;
     overflow: hidden;
-    touch-action: none;  /* отключаем жесты масштабирования */
+    touch-action: none;
 }
 
 #gameContainer {
     position: relative;
     width: 100%;
     max-width: 400px;
-    aspect-ratio: 2/3;   /* 400:600 */
+    aspect-ratio: 2/3;
 }
 
 #gameCanvas {
@@ -28,6 +28,44 @@ body {
     display: block;
     border: 2px solid #333;
     background: #0a0a1a;
+}
+
+/* Стартовое меню */
+#startScreen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.92);
+    color: #fff;
+    padding: 30px 20px;
+    text-align: center;
+    border-radius: 12px;
+    border: 2px solid #00ffcc;
+    z-index: 30;
+    width: 85%;
+    max-width: 340px;
+}
+
+#startScreen h1 {
+    font-size: 36px;
+    color: #ff3366;
+    text-shadow: 0 0 15px #ff3366;
+    margin-bottom: 15px;
+}
+
+.controls {
+    margin: 15px 0;
+    font-size: 14px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.controls p {
+    color: #ccc;
+    margin: 0;
 }
 
 #gameOver {
@@ -58,22 +96,23 @@ body {
 }
 
 button {
-    background: #ff0000;
+    background: #ff3366;
     color: #fff;
     border: none;
-    padding: 12px 24px;
-    font-size: 16px;
+    padding: 12px 28px;
+    font-size: 18px;
     cursor: pointer;
-    border-radius: 5px;
+    border-radius: 6px;
     transition: all 0.3s;
+    margin-top: 10px;
 }
 
 button:hover {
-    background: #ff3333;
+    background: #ff5a7a;
     transform: scale(1.05);
-    box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+    box-shadow: 0 0 15px rgba(255, 51, 102, 0.6);
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
