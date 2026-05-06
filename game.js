@@ -741,7 +741,7 @@ class Game {
 
     draw() {
         this.ctx.clearRect(0, 0, 400, 600);
-        }
+        
 
         this.enemies.forEach(e => e.draw(this.ctx));
         this.bullets.forEach(b => b.draw(this.ctx));
