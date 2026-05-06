@@ -563,9 +563,15 @@ class Game {
         });
 
         document.getElementById('startButton').addEventListener('click', () => {
-            this.sound.init();            // активируем аудиоконтекст при первом взаимодействии
+        this.sound.init();
+        // Запускаем фоновую музыку (если ещё не играет)
+        const bgm = document.getElementById('bgMusic');
+            if (bgm && bgm.paused) {
+            bgm.play().catch(e => console.warn('Не удалось запустить музыку:', e));
+            }
             this.startCountdown();
         });
+        
         document.getElementById('restartButton').addEventListener('click', () => {
             this.startCountdown();        // контекст уже активен
         });
