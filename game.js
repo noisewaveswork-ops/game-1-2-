@@ -4,7 +4,7 @@ class Player {
         this.y = y;
         this.width = 16;
         this.height = 16;
-        this.speed = 6;
+        this.speed = 10;               // Увеличили для быстрого прилипания к курсору
         this.lives = 3;
         this.bombs = 3;
         this.score = 0;
@@ -14,7 +14,6 @@ class Player {
     }
 
     update(mouseX, mouseY) {
-        // Следуем за мышью (плавное движение)
         const dx = mouseX - this.x;
         const dy = mouseY - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -25,24 +24,20 @@ class Player {
             this.y += (dy / dist) * step;
         }
 
-        // Границы канваса
         this.x = Math.max(this.width/2, Math.min(400 - this.width/2, this.x));
         this.y = Math.max(this.height/2, Math.min(600 - this.height/2, this.y));
 
-        // Неуязвимость
         if (this.invulnerable) {
             this.invulnerableTimer--;
             if (this.invulnerableTimer <= 0) this.invulnerable = false;
         }
 
-        // Кулдаун стрельбы
         if (this.shootCooldown > 0) this.shootCooldown--;
     }
 
     draw(ctx) {
         ctx.save();
         if (!this.invulnerable || Math.floor(Date.now() / 100) % 2) {
-            // Кораблик
             ctx.fillStyle = '#00ffcc';
             ctx.shadowBlur = 12;
             ctx.shadowColor = '#00ffcc';
@@ -52,7 +47,6 @@ class Player {
             ctx.lineTo(this.x + 8, this.y + 8);
             ctx.closePath();
             ctx.fill();
-            // Кабина
             ctx.fillStyle = '#ffffff';
             ctx.shadowBlur = 0;
             ctx.beginPath();
@@ -66,7 +60,7 @@ class Player {
         if (!this.invulnerable) {
             this.lives--;
             this.invulnerable = true;
-            this.invulnerableTimer = 90; // 1.5 сек при 60 fps
+            this.invulnerableTimer = 90;
             return true;
         }
         return false;
@@ -131,7 +125,6 @@ class Enemy {
 
     draw(ctx) {
         ctx.save();
-        // Вражеский объект
         ctx.fillStyle = '#ff3366';
         ctx.shadowBlur = 10;
         ctx.shadowColor = '#ff3366';
@@ -139,7 +132,6 @@ class Enemy {
         ctx.arc(this.x, this.y, 14, 0, Math.PI * 2);
         ctx.fill();
         
-        // Полоска здоровья
         if (this.health < this.maxHealth) {
             const barWidth = 28;
             const barHeight = 3;
@@ -169,25 +161,30 @@ class Game {
         this.enemies = [];
         this.mouseX = 200;
         this.mouseY = 500;
-        this.gameRunning = true;
+        
+        // Состояния отсчёта
+        this.gameRunning = false;        // игра начнётся после отсчёта
         this.gameOver = false;
+        this.countdownActive = true;
+        this.countdown = 3;
+        this.showGo = false;
+        
         this.wave = 1;
         this.waveTimer = 0;
         this.enemiesSpawned = 0;
         
-        // Для мобильного управления
         this.touchActive = false;
         this.touchStartPos = { x: 0, y: 0 };
         
         this.setupEventListeners();
+        this.startCountdown();
         this.gameLoop();
     }
 
     setupEventListeners() {
-        // Мышь
         this.canvas.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.canvas.width / rect.width;   // корректировка масштаба
+            const scaleX = this.canvas.width / rect.width;
             const scaleY = this.canvas.height / rect.height;
             this.mouseX = (e.clientX - rect.left) * scaleX;
             this.mouseY = (e.clientY - rect.top) * scaleY;
@@ -200,14 +197,11 @@ class Game {
             const scaleY = this.canvas.height / rect.height;
             const clickX = (e.clientX - rect.left) * scaleX;
             const clickY = (e.clientY - rect.top) * scaleY;
-            
-            // Проверяем зону бомб (низ по центру)
             if (this.isInBombArea(clickX, clickY)) {
                 this.useBomb();
             }
         });
 
-        // Мобильные касания
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (!this.gameRunning || this.gameOver) return;
@@ -218,8 +212,6 @@ class Game {
             this.touchStartPos.x = (touch.clientX - rect.left) * scaleX;
             this.touchStartPos.y = (touch.clientY - rect.top) * scaleY;
             this.touchActive = true;
-            
-            // Сразу двигаем игрока к точке касания
             this.mouseX = this.touchStartPos.x;
             this.mouseY = this.touchStartPos.y;
         }, { passive: false });
@@ -241,9 +233,7 @@ class Game {
                 this.touchActive = false;
                 return;
             }
-            
             const rect = this.canvas.getBoundingClientRect();
-            // Если палец почти не двигался, считаем тапом (для бомбы)
             const dx = this.mouseX - this.touchStartPos.x;
             const dy = this.mouseY - this.touchStartPos.y;
             if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
@@ -255,32 +245,52 @@ class Game {
         });
 
         document.getElementById('restartButton').addEventListener('click', () => {
-            this.startGame();
+            this.restartGame();
         });
     }
 
     isInBombArea(x, y) {
-        // Бомбы рисуются внизу по центру: три иконки между x от 140 до 260, y от 565 до 590
         return (x > 130 && x < 270 && y > 555 && y < 600);
     }
 
-    startGame() {
+    startCountdown() {
+        this.countdown = 3;
+        this.countdownActive = true;
+        this.gameRunning = false;
+        this.showGo = false;
+
+        const interval = setInterval(() => {
+            if (this.countdown > 1) {
+                this.countdown--;
+            } else {
+                clearInterval(interval);
+                this.countdown = 0;
+                this.showGo = true;
+                setTimeout(() => {
+                    this.showGo = false;
+                    this.gameRunning = true;
+                    this.countdownActive = false;
+                }, 600);
+            }
+        }, 800);
+    }
+
+    restartGame() {
+        // Полный сброс и новый отсчёт
         this.player = new Player(200, 500);
         this.bullets = [];
         this.enemies = [];
         this.wave = 1;
         this.enemiesSpawned = 0;
         this.waveTimer = 0;
-        this.gameRunning = true;
         this.gameOver = false;
         document.getElementById('gameOver').classList.add('hidden');
+        this.startCountdown();
     }
 
     useBomb() {
         if (this.player.useBomb()) {
-            // Уничтожаем вражеские пули
             this.bullets = this.bullets.filter(b => !b.isEnemy);
-            // Наносим урон всем врагам
             this.enemies.forEach(enemy => {
                 if (enemy.hit(3)) {
                     this.player.score += enemy.points * 2;
@@ -325,7 +335,6 @@ class Game {
                 }
             }
         ];
-        
         const pattern = patterns[Math.floor(Math.random() * patterns.length)];
         this.enemies.push(new Enemy(x, y, pattern));
     }
@@ -336,16 +345,13 @@ class Game {
         // Автострельба
         if (this.player.shootCooldown <= 0) {
             this.bullets.push(new Bullet(this.player.x, this.player.y - 15, -Math.PI/2, 9, false));
-            this.player.shootCooldown = 6; // ~10 выстрелов в секунду
+            this.player.shootCooldown = 6;
         }
 
         this.player.update(this.mouseX, this.mouseY);
-        
-        // Обновление пуль
         this.bullets.forEach(b => b.update());
         this.bullets = this.bullets.filter(b => !b.isOffScreen());
 
-        // Обновление врагов и спавн
         if (this.enemiesSpawned < this.wave * 5) {
             this.waveTimer++;
             if (this.waveTimer > 50) {
@@ -358,7 +364,6 @@ class Game {
         this.enemies.forEach(e => e.update());
         this.checkCollisions();
 
-        // Новая волна
         if (this.enemies.length === 0 && this.enemiesSpawned >= this.wave * 5) {
             this.wave++;
             this.enemiesSpawned = 0;
@@ -368,7 +373,6 @@ class Game {
     }
 
     checkCollisions() {
-        // Пули игрока → враги
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const bullet = this.bullets[i];
             if (!bullet.isEnemy) {
@@ -388,7 +392,6 @@ class Game {
             }
         }
 
-        // Вражеские пули → игрок
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const bullet = this.bullets[i];
             if (bullet.isEnemy) {
@@ -403,7 +406,6 @@ class Game {
             }
         }
 
-        // Враги → игрок (столкновение тел)
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             const enemy = this.enemies[i];
             const dx = enemy.x - this.player.x;
@@ -425,7 +427,6 @@ class Game {
     }
 
     drawUI() {
-        // Жизни (левый верх)
         for (let i = 0; i < 3; i++) {
             const x = 20 + i * 22;
             const y = 20;
@@ -438,7 +439,6 @@ class Game {
                 this.ctx.fillStyle = '#444';
                 this.ctx.shadowBlur = 0;
             }
-            // Сердечко
             this.ctx.beginPath();
             this.ctx.arc(x - 5, y - 4, 4, Math.PI, 0, false);
             this.ctx.arc(x + 5, y - 4, 4, Math.PI, 0, false);
@@ -449,7 +449,6 @@ class Game {
             this.ctx.restore();
         }
 
-        // Бомбы (низ по центру)
         const bombY = 580;
         for (let i = 0; i < 3; i++) {
             const x = 160 + i * 40;
@@ -464,19 +463,16 @@ class Game {
                 this.ctx.strokeStyle = '#555';
                 this.ctx.shadowBlur = 0;
             }
-            // Корпус бомбы
             this.ctx.beginPath();
             this.ctx.arc(x, bombY, 8, 0, Math.PI * 2);
             this.ctx.fill();
             this.ctx.stroke();
-            // Фитиль
             this.ctx.beginPath();
             this.ctx.moveTo(x, bombY - 8);
             this.ctx.lineTo(x + 4, bombY - 14);
             this.ctx.strokeStyle = '#ffaa00';
             this.ctx.lineWidth = 2;
             this.ctx.stroke();
-            // Искра
             if (i < this.player.bombs) {
                 this.ctx.fillStyle = '#ff4400';
                 this.ctx.shadowBlur = 6;
@@ -488,7 +484,6 @@ class Game {
             this.ctx.restore();
         }
 
-        // Номер волны
         this.ctx.fillStyle = '#ffffff';
         this.ctx.font = '14px Arial';
         this.ctx.textAlign = 'right';
@@ -509,10 +504,29 @@ class Game {
             this.ctx.fillRect(sx, sy, 1.5, 1.5);
         }
 
+        // Отрисовка объектов
         this.enemies.forEach(e => e.draw(this.ctx));
         this.bullets.forEach(b => b.draw(this.ctx));
         this.player.draw(this.ctx);
         this.drawUI();
+
+        // Обратный отсчёт
+        if (this.countdownActive) {
+            this.ctx.save();
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+            this.ctx.fillRect(0, 0, 400, 600);
+            this.ctx.font = 'bold 72px Arial';
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.textAlign = 'center';
+            
+            if (this.countdown > 0) {
+                this.ctx.fillText(this.countdown, 200, 330);
+            } else if (this.showGo) {
+                this.ctx.fillStyle = '#00ffcc';
+                this.ctx.fillText('GO!', 200, 330);
+            }
+            this.ctx.restore();
+        }
     }
 
     gameLoop() {
