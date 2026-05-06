@@ -516,11 +516,20 @@ class Game {
         });
 
         document.getElementById('startButton').addEventListener('click', () => {
-            this.sound.init();
-            const bgm = document.getElementById('bgMusic');
-            if (bgm && bgm.paused) bgm.play().catch(e => console.warn('Музыка не запустилась:', e));
-            this.startCountdown();
-        });
+    this.sound.init();
+    
+    // Запускаем фоновое видео (если ещё не играет)
+    const bgVideo = document.getElementById('bgVideo');
+    if (bgVideo) {
+        bgVideo.play().catch(e => console.warn('Видео не запустилось:', e));
+    }
+
+    // Запускаем музыку
+    const bgm = document.getElementById('bgMusic');
+    if (bgm && bgm.paused) bgm.play().catch(e => console.warn('Музыка не запустилась:', e));
+    
+    this.startCountdown();
+});
         document.getElementById('restartButton').addEventListener('click', () => {
             this.startCountdown();
         });
