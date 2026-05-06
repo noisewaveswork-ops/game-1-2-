@@ -16,7 +16,7 @@ body {
 
 #gameContainer {
     position: relative;
-    width: 400px;   /* Было 800px */
+    width: 800px;
     height: 600px;
 }
 
@@ -24,7 +24,6 @@ body {
     border: 2px solid #333;
     background: #0a0a1a;
     display: block;
-    /* Размеры теперь заданы в HTML, здесь не нужны */
 }
 
 #ui {
