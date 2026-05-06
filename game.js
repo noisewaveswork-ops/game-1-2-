@@ -1,5 +1,5 @@
 /* ==============================
-   ЗВУКОВОЙ МЕНЕДЖЕР (без изменений)
+   ЗВУКОВОЙ МЕНЕДЖЕР
    ============================== */
 class SoundManager {
     constructor() {
@@ -81,43 +81,60 @@ const ASSETS = {
     bullet_enemy: 'assets/bullet_enemy.png',
     heart: 'assets/heart.png',
     bomb_icon: 'assets/bomb.png',
-    background: 'assets/bg.mp4'   // необязательно
+    video_bg: 'assets/bg.mp4'  // видео-фон
 };
 
 class AssetLoader {
     constructor() {
         this.images = {};
-        this.total = Object.keys(ASSETS).length;
+        this.total = Object.keys(ASSETS).filter(k => k !== 'video_bg').length;
         this.loaded = 0;
     }
 
     loadAll() {
         return new Promise((resolve, reject) => {
-            if (this.total === 0) return resolve();
+            // Загружаем изображения
             for (let key in ASSETS) {
+                if (key === 'video_bg') continue; // видео отдельно
                 const img = new Image();
                 img.onload = () => {
                     this.loaded++;
                     this.updateProgress();
-                    if (this.loaded === this.total) resolve();
+                    if (this.loaded === this.total) this.checkComplete(resolve);
                 };
                 img.onerror = () => {
-                    // Заглушка: пустая картинка (чтобы не крашилось)
                     console.warn(`Не удалось загрузить ${ASSETS[key]}`);
                     this.loaded++;
                     this.updateProgress();
-                    if (this.loaded === this.total) resolve();
+                    if (this.loaded === this.total) this.checkComplete(resolve);
                 };
                 img.src = ASSETS[key];
                 this.images[key] = img;
             }
+
+            // Если изображений нет — сразу резолвим
+            if (this.total === 0) this.checkComplete(resolve);
         });
     }
 
+    checkComplete(resolve) {
+        // Видео загружается отдельно
+        const video = document.getElementById('bgVideo');
+        if (video) {
+            video.addEventListener('canplaythrough', () => {
+                video.play(); // запускаем видео
+                resolve();
+            }, { once: true });
+            video.load(); // начинаем загрузку
+        } else {
+            resolve();
+        }
+    }
+
     updateProgress() {
-        const bar = document.querySelector('#loadingBar');
+        const bar = document.getElementById('loadingBar');
         if (bar) bar.style.width = `${(this.loaded / this.total) * 100}%`;
-        const text = document.querySelector('#loadingText');
+        const text = document.getElementById('loadingText');
         if (text) text.textContent = `Загрузка: ${this.loaded}/${this.total}`;
     }
 
@@ -127,13 +144,13 @@ class AssetLoader {
 }
 
 /* ==============================
-   ИГРОВЫЕ КЛАССЫ (переписаны под спрайты)
+   ИГРОВЫЕ КЛАССЫ
    ============================== */
 class Player {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.width = 24;   // размеры спрайта для подгонки
+        this.width = 24;
         this.height = 24;
         this.lives = 3;
         this.bombs = 3;
@@ -162,7 +179,6 @@ class Player {
             if (img && img.complete && img.naturalWidth > 0) {
                 ctx.drawImage(img, this.x - this.width/2, this.y - this.height/2, this.width, this.height);
             } else {
-                // Заглушка
                 ctx.fillStyle = '#00ffcc';
                 ctx.shadowBlur = 12;
                 ctx.shadowColor = '#00ffcc';
@@ -214,7 +230,7 @@ class Bullet {
         this.y = y;
         this.angle = angle;
         this.speed = speed;
-        this.radius = isEnemy ? 5 : 4;   // для коллизий
+        this.radius = isEnemy ? 5 : 4;
         this.isEnemy = isEnemy;
         this.damage = 1;
     }
@@ -231,7 +247,6 @@ class Bullet {
         if (img && img.complete && img.naturalWidth > 0) {
             ctx.drawImage(img, this.x - img.width/2, this.y - img.height/2);
         } else {
-            // Заглушка
             ctx.fillStyle = this.isEnemy ? '#ff4444' : '#ffee00';
             ctx.shadowBlur = 8;
             ctx.shadowColor = ctx.fillStyle;
@@ -286,12 +301,12 @@ class Enemy {
         this.x = x;
         this.y = y;
         this.pattern = pattern;
-        this.type = enemyType;   // ключ для спрайта
+        this.type = enemyType;
         this.timer = 0;
         this.health = pattern.health || 1;
         this.maxHealth = this.health;
         this.points = pattern.points || 100;
-        this.width = 28;   // под размер спрайта врага
+        this.width = 28;
         this.height = 28;
     }
 
@@ -302,13 +317,11 @@ class Enemy {
 
     draw(ctx, assets) {
         ctx.save();
-        // Выбираем спрайт по типу врага
         const imgKey = 'enemy_' + this.type;
         const img = assets.get(imgKey) || assets.get('enemy_straight');
         if (img && img.complete && img.naturalWidth > 0) {
             ctx.drawImage(img, this.x - this.width/2, this.y - this.height/2, this.width, this.height);
         } else {
-            // Заглушка
             ctx.fillStyle = '#ff3366';
             ctx.shadowBlur = 10;
             ctx.shadowColor = '#ff3366';
@@ -316,10 +329,8 @@ class Enemy {
             ctx.arc(this.x, this.y, 14, 0, Math.PI * 2);
             ctx.fill();
         }
-        // Полоска здоровья
         if (this.health < this.maxHealth) {
-            const barWidth = 28;
-            const barHeight = 3;
+            const barWidth = 28, barHeight = 3;
             ctx.fillStyle = '#ff0000';
             ctx.fillRect(this.x - barWidth / 2, this.y - 22, barWidth, barHeight);
             ctx.fillStyle = '#00ff00';
@@ -344,6 +355,9 @@ class Game {
         this.canvas.width = 400;
         this.canvas.height = 600;
         this.assets = assets;
+
+        // Видео-фон
+        this.bgVideo = document.getElementById('bgVideo');
 
         this.isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         this.showCorrectControls();
@@ -382,7 +396,7 @@ class Game {
         this.defineWavePatterns();
         this.setupEventListeners();
 
-        // Показываем стартовый экран после загрузки (скрываем загрузочный экран)
+        // Показываем стартовый экран
         document.getElementById('loadingScreen').classList.add('hidden');
         document.getElementById('startScreen').classList.remove('hidden');
 
@@ -557,7 +571,6 @@ class Game {
             if (e.code === 'KeyZ') this.laserKeyDown = false;
         });
 
-        // Touch-обработчики (аналогичны предыдущим версиям)
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (!this.gameRunning || this.gameOver) return;
@@ -613,7 +626,7 @@ class Game {
             this.startCountdown();
         });
 
-        // Автопауза музыки при скрытии (IntersectionObserver)
+        // Автопауза музыки при скрытии
         const observer = new IntersectionObserver((entries) => {
             const bgm = document.getElementById('bgMusic');
             if (!bgm) return;
@@ -621,6 +634,8 @@ class Game {
                 if (this.gameStarted && bgm.paused) bgm.play().catch(e => {});
             } else {
                 bgm.pause();
+                // Видео тоже останавливаем
+                if (this.bgVideo) this.bgVideo.pause();
             }
         }, { threshold: 0 });
         observer.observe(this.canvas);
@@ -630,6 +645,7 @@ class Game {
             if (event.data === 'pauseMusic') {
                 const bgm = document.getElementById('bgMusic');
                 if (bgm) bgm.pause();
+                if (this.bgVideo) this.bgVideo.pause();
             }
         });
     }
@@ -665,241 +681,13 @@ class Game {
         this.countdown = 3;
         this.countdownTimer = 60;
         this.countdownText = '3';
+        // Запускаем видео, если оно на паузе
+        if (this.bgVideo && this.bgVideo.paused) {
+            this.bgVideo.play().catch(e => {});
+        }
     }
 
     useBomb() {
         if (this.player.useBomb()) {
             this.bullets = this.bullets.filter(b => !b.isEnemy);
-            this.enemies.forEach(enemy => {
-                if (enemy.hit(3)) this.player.score += enemy.points * 2;
-            });
-            this.enemies = this.enemies.filter(e => e.health > 0);
-            this.sound.bomb();
-        }
-    }
-
-    update() {
-        if (this.countdown > 0) {
-            this.countdownTimer--;
-            if (this.countdownTimer <= 0) {
-                this.countdown--;
-                if (this.countdown > 0) {
-                    this.countdownText = this.countdown.toString();
-                    this.countdownTimer = 60;
-                } else {
-                    this.countdownText = '';
-                    this.gameRunning = true;
-                }
-            }
-            return;
-        }
-
-        if (!this.gameRunning || this.gameOver) return;
-
-        this.laserMode = this.laserKeyDown || this.twoFingers;
-
-        if (this.player.shootCooldown <= 0) {
-            if (this.laserMode) {
-                this.bullets.push(new HomingBullet(this.player.x, this.player.y - 5, this));
-                this.player.shootCooldown = 10;
-            } else {
-                this.bullets.push(new Bullet(this.player.x, this.player.y - 15, -Math.PI / 2, 9, false));
-                this.player.shootCooldown = 8;
-            }
-            this.sound.playerShoot();
-        }
-
-        if (!this.isMobile) this.player.update(this.mouseX, this.mouseY);
-
-        this.bullets.forEach(b => b.update());
-        this.bullets = this.bullets.filter(b => !b.isOffScreen());
-
-        this.enemies.forEach(e => e.update());
-        this.enemies = this.enemies.filter(e => e.y < 620 + 20);
-        this.spawnFromQueue();
-        this.checkCollisions();
-
-        if (this.enemies.length === 0 && this.waveSpawnQueue.length === 0) this.nextWave();
-    }
-
-    checkCollisions() {
-        for (let i = this.bullets.length - 1; i >= 0; i--) {
-            const bullet = this.bullets[i];
-            if (!bullet.isEnemy) {
-                for (let j = this.enemies.length - 1; j >= 0; j--) {
-                    const enemy = this.enemies[j];
-                    const dx = bullet.x - enemy.x;
-                    const dy = bullet.y - enemy.y;
-                    if (Math.sqrt(dx * dx + dy * dy) < 18) {
-                        this.bullets.splice(i, 1);
-                        if (enemy.hit(bullet.damage || 1)) {
-                            this.player.score += enemy.points;
-                            this.enemies.splice(j, 1);
-                            this.sound.enemyHit();
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-
-        for (let i = this.bullets.length - 1; i >= 0; i--) {
-            const bullet = this.bullets[i];
-            if (bullet.isEnemy) {
-                const dx = bullet.x - this.player.x;
-                const dy = bullet.y - this.player.y;
-                if (Math.sqrt(dx * dx + dy * dy) < 6) {
-                    this.bullets.splice(i, 1);
-                    if (this.player.hit() && this.player.lives <= 0) this.endGame();
-                }
-            }
-        }
-
-        for (let i = this.enemies.length - 1; i >= 0; i--) {
-            const enemy = this.enemies[i];
-            const dx = enemy.x - this.player.x;
-            const dy = enemy.y - this.player.y;
-            if (Math.sqrt(dx * dx + dy * dy) < 20) {
-                this.enemies.splice(i, 1);
-                if (this.player.hit() && this.player.lives <= 0) this.endGame();
-            }
-        }
-    }
-
-    endGame() {
-        this.gameRunning = false;
-        this.gameOver = true;
-        document.getElementById('finalScore').textContent = `Счёт: ${this.player.score}`;
-        document.getElementById('gameOver').classList.remove('hidden');
-        this.sound.playerDeath();
-    }
-
-    drawUI() {
-        const heartImg = this.assets.get('heart');
-        for (let i = 0; i < 3; i++) {
-            const x = 20 + i * 30, y = 20;
-            this.ctx.save();
-            if (i < this.player.lives) {
-                if (heartImg && heartImg.complete) {
-                    this.ctx.drawImage(heartImg, x, y, 20, 20);
-                } else {
-                    this.ctx.fillStyle = '#ff3366';
-                    this.ctx.shadowBlur = 8;
-                    this.ctx.shadowColor = '#ff3366';
-                    this.ctx.beginPath();
-                    this.ctx.arc(x+10, y+10, 8, 0, Math.PI*2);
-                    this.ctx.fill();
-                }
-            } else {
-                this.ctx.globalAlpha = 0.3;
-                if (heartImg && heartImg.complete) {
-                    this.ctx.drawImage(heartImg, x, y, 20, 20);
-                } else {
-                    this.ctx.fillStyle = '#444';
-                    this.ctx.beginPath();
-                    this.ctx.arc(x+10, y+10, 8, 0, Math.PI*2);
-                    this.ctx.fill();
-                }
-                this.ctx.globalAlpha = 1;
-            }
-            this.ctx.restore();
-        }
-
-        const bombImg = this.assets.get('bomb_icon');
-        for (let i = 0; i < 3; i++) {
-            const x = 160 + i * 40, y = 570;
-            this.ctx.save();
-            if (i < this.player.bombs) {
-                if (bombImg && bombImg.complete) {
-                    this.ctx.drawImage(bombImg, x, y, 28, 28);
-                } else {
-                    this.ctx.fillStyle = '#ffaa00';
-                    this.ctx.shadowBlur = 8;
-                    this.ctx.shadowColor = '#ffaa00';
-                    this.ctx.beginPath();
-                    this.ctx.arc(x+14, y+14, 10, 0, Math.PI*2);
-                    this.ctx.fill();
-                }
-            } else {
-                this.ctx.globalAlpha = 0.3;
-                if (bombImg && bombImg.complete) {
-                    this.ctx.drawImage(bombImg, x, y, 28, 28);
-                } else {
-                    this.ctx.fillStyle = '#555';
-                    this.ctx.beginPath();
-                    this.ctx.arc(x+14, y+14, 10, 0, Math.PI*2);
-                    this.ctx.fill();
-                }
-                this.ctx.globalAlpha = 1;
-            }
-            this.ctx.restore();
-        }
-
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = '14px Arial';
-        this.ctx.textAlign = 'right';
-        this.ctx.fillText(`Волна ${this.wave}`, 380, 20);
-        this.ctx.textAlign = 'left';
-    }
-
-    draw() {
-        // Фон
-        const bgImg = this.assets.get('background');
-        if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
-            this.ctx.drawImage(bgImg, 0, 0, 400, 600);
-        } else {
-            this.ctx.fillStyle = '#0a0a1a';
-            this.ctx.fillRect(0, 0, 400, 600);
-            this.ctx.fillStyle = '#ffffff';
-            for (let i = 0; i < 30; i++) {
-                const sx = (i * 47 + 13) % 400, sy = (i * 83 + 7) % 600;
-                this.ctx.fillRect(sx, sy, 1.5, 1.5);
-            }
-        }
-
-        this.enemies.forEach(e => e.draw(this.ctx, this.assets));
-        this.bullets.forEach(b => b.draw(this.ctx, this.assets));
-        this.player.draw(this.ctx, this.assets);
-        this.drawUI();
-
-        if (this.countdown > 0 && this.countdownText) {
-            this.ctx.save();
-            this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            this.ctx.fillRect(0, 0, 400, 600);
-            this.ctx.font = 'bold 120px Arial';
-            this.ctx.fillStyle = '#ffffff';
-            this.ctx.textAlign = 'center';
-            this.ctx.shadowBlur = 20;
-            this.ctx.shadowColor = '#ff0000';
-            this.ctx.fillText(this.countdownText, 200, 320);
-            this.ctx.restore();
-        }
-    }
-
-    gameLoop(timestamp) {
-        if (this.lastTime === 0) this.lastTime = timestamp;
-        let delta = timestamp - this.lastTime;
-        this.lastTime = timestamp;
-        if (delta > 1000) delta = 1000;
-
-        this.accumulator += delta;
-        while (this.accumulator >= this.fixedDelta) {
-            this.update();
-            this.accumulator -= this.fixedDelta;
-        }
-
-        this.draw();
-        requestAnimationFrame((ts) => this.gameLoop(ts));
-    }
-}
-
-/* ==============================
-   ТОЧКА ВХОДА (загрузка ассетов)
-   ============================== */
-window.addEventListener('load', () => {
-    const loader = new AssetLoader();
-    loader.loadAll().then(() => {
-        // Загружено – создаём игру, скроется loadingScreen внутри конструктора
-        new Game(loader);
-    });
-});
+            this
