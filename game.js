@@ -9,7 +9,6 @@ class SoundManager {
         if (this.initialized) return;
         try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            // Разблокируем на мобильных (пустой звук)
             const buf = this.ctx.createBuffer(1, 1, 22050);
             const src = this.ctx.createBufferSource();
             src.buffer = buf;
@@ -53,35 +52,17 @@ class SoundManager {
         source.start();
     }
 
-    playerShoot() {
-        this.playTone(880, 0.05, 'square', 0.08);
-    }
-
-    enemyShoot() {
-        this.playTone(440, 0.08, 'square', 0.06);
-    }
-
-    enemyHit() {
-        this.playNoise(0.03, 0.1);
-    }
-
+    playerShoot() { this.playTone(880, 0.05, 'square', 0.08); }
+    enemyShoot() { this.playTone(440, 0.08, 'square', 0.06); }
+    enemyHit() { this.playNoise(0.03, 0.1); }
     bomb() {
         this.playNoise(0.5, 0.25);
-        // Дополнительный низкий гул для эпичности
-        if (this.ctx) {
-            setTimeout(() => this.playTone(80, 0.3, 'sawtooth', 0.2), 50);
-        }
+        if (this.ctx) setTimeout(() => this.playTone(80, 0.3, 'sawtooth', 0.2), 50);
     }
-
-    playerDeath() {
-        this.playTone(150, 0.8, 'sawtooth', 0.2);
-    }
-
+    playerDeath() { this.playTone(150, 0.8, 'sawtooth', 0.2); }
     waveStart() {
         this.playTone(880, 0.1, 'square', 0.1);
-        if (this.ctx) {
-            setTimeout(() => this.playTone(1100, 0.1, 'square', 0.1), 100);
-        }
+        if (this.ctx) setTimeout(() => this.playTone(1100, 0.1, 'square', 0.1), 100);
     }
 }
 
@@ -221,19 +202,14 @@ class HomingBullet extends Bullet {
                 closestEnemy = enemy;
             }
         }
-
         if (closestEnemy) {
             const desiredAngle = Math.atan2(closestEnemy.y - this.y, closestEnemy.x - this.x);
             let angleDiff = desiredAngle - this.angle;
             while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
             while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-            if (angleDiff > this.turnSpeed) {
-                this.angle += this.turnSpeed;
-            } else if (angleDiff < -this.turnSpeed) {
-                this.angle -= this.turnSpeed;
-            } else {
-                this.angle = desiredAngle;
-            }
+            if (angleDiff > this.turnSpeed) this.angle += this.turnSpeed;
+            else if (angleDiff < -this.turnSpeed) this.angle -= this.turnSpeed;
+            else this.angle = desiredAngle;
         }
         super.update();
     }
@@ -248,7 +224,6 @@ class Enemy {
         this.health = pattern.health || 1;
         this.maxHealth = this.health;
         this.points = pattern.points || 100;
-        this.shootTimer = 0;
     }
 
     update() {
@@ -291,7 +266,8 @@ class Game {
         this.isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         this.showCorrectControls();
 
-        this.sound = new SoundManager();   // менеджер звуков
+        this.sound = new SoundManager();
+        this.gameStarted = false; // флаг, что игра была запущена
 
         this.player = new Player(200, 500);
         this.bullets = [];
@@ -325,8 +301,7 @@ class Game {
     defineWavePatterns() {
         this.patterns = {
             straightShooter: {
-                health: 3,
-                points: 100,
+                health: 3, points: 100,
                 update: function(enemy) {
                     enemy.y += 2;
                     if (enemy.timer % 60 === 0) {
@@ -337,8 +312,7 @@ class Game {
                 }
             },
             sineFan: {
-                health: 4,
-                points: 150,
+                health: 4, points: 150,
                 update: function(enemy) {
                     enemy.y += 1.8;
                     enemy.x += Math.sin(enemy.timer * 0.05) * 2.5;
@@ -352,8 +326,7 @@ class Game {
                 }
             },
             spiral: {
-                health: 6,
-                points: 200,
+                health: 6, points: 200,
                 update: function(enemy) {
                     enemy.y += 1.2;
                     if (enemy.timer % 40 === 0) {
@@ -366,8 +339,7 @@ class Game {
                 }
             },
             sideSweeper: {
-                health: 5,
-                points: 180,
+                health: 5, points: 180,
                 update: function(enemy) {
                     if (!enemy.initialized) {
                         enemy.initialized = true;
@@ -389,8 +361,7 @@ class Game {
                 }
             },
             miniboss: {
-                health: 20,
-                points: 500,
+                health: 20, points: 500,
                 update: function(enemy) {
                     enemy.y += 0.8;
                     enemy.x += Math.sin(enemy.timer * 0.02) * 2;
@@ -416,19 +387,13 @@ class Game {
     buildWave(waveNumber) {
         const queue = [];
         if (waveNumber <= 2) {
-            for (let i = 0; i < 4; i++) {
-                queue.push({ type: 'straightShooter', x: 80 + i * 80, y: -30, delay: i * 30 });
-            }
+            for (let i = 0; i < 4; i++) queue.push({ type: 'straightShooter', x: 80 + i * 80, y: -30, delay: i * 30 });
         } else if (waveNumber <= 4) {
-            for (let i = 0; i < 3; i++) {
-                queue.push({ type: 'straightShooter', x: 60 + i * 120, y: -30, delay: i * 25 });
-            }
+            for (let i = 0; i < 3; i++) queue.push({ type: 'straightShooter', x: 60 + i * 120, y: -30, delay: i * 25 });
             queue.push({ type: 'sineFan', x: 200, y: -50, delay: 60 });
             queue.push({ type: 'sineFan', x: 100, y: -70, delay: 90 });
         } else if (waveNumber <= 6) {
-            for (let i = 0; i < 2; i++) {
-                queue.push({ type: 'straightShooter', x: 150 + i * 100, y: -30, delay: i * 30 });
-            }
+            for (let i = 0; i < 2; i++) queue.push({ type: 'straightShooter', x: 150 + i * 100, y: -30, delay: i * 30 });
             queue.push({ type: 'spiral', x: 200, y: -40, delay: 50 });
             queue.push({ type: 'sineFan', x: 300, y: -60, delay: 80 });
         } else if (waveNumber <= 8) {
@@ -436,9 +401,8 @@ class Game {
             queue.push({ type: 'sideSweeper', x: 420, y: 150, delay: 50 });
             queue.push({ type: 'spiral', x: 200, y: -40, delay: 80 });
         } else if (waveNumber === 9) {
-            for (let i = 0; i < 2; i++) {
-                queue.push({ type: 'spiral', x: 120 + i * 160, y: -40, delay: i * 40 });
-            }
+            queue.push({ type: 'spiral', x: 120, y: -40, delay: 0 });
+            queue.push({ type: 'spiral', x: 280, y: -40, delay: 40 });
             queue.push({ type: 'sideSweeper', x: -20, y: 200, delay: 60 });
         } else if (waveNumber === 10) {
             queue.push({ type: 'miniboss', x: 200, y: -50, delay: 30 });
@@ -449,9 +413,7 @@ class Game {
                 const type = types[Math.floor(Math.random() * types.length)];
                 queue.push({ type, x: 50 + Math.random() * 300, y: -30 - Math.random() * 40, delay: i * 20 });
             }
-            if (waveNumber % 5 === 0) {
-                queue.push({ type: 'miniboss', x: 200, y: -50, delay: 80 });
-            }
+            if (waveNumber % 5 === 0) queue.push({ type: 'miniboss', x: 200, y: -50, delay: 80 });
         }
         return queue;
     }
@@ -462,23 +424,18 @@ class Game {
         this.waveSpawnQueue = this.buildWave(this.wave);
         this.spawnTimer = 0;
         this.player.score += 500 * (this.wave - 1);
-        if (this.wave > 1) this.sound.waveStart();  // звук начала новой волны
+        if (this.wave > 1) this.sound.waveStart();
     }
 
     spawnFromQueue() {
         if (this.waveSpawnQueue.length === 0) {
-            if (this.enemies.length === 0) {
-                this.nextWave();
-            }
+            if (this.enemies.length === 0) this.nextWave();
             return;
         }
-
         while (this.waveSpawnQueue.length > 0 && this.spawnTimer >= this.waveSpawnQueue[0].delay) {
             const spec = this.waveSpawnQueue.shift();
             const pattern = this.patterns[spec.type];
-            if (pattern) {
-                this.enemies.push(new Enemy(spec.x, spec.y, pattern));
-            }
+            if (pattern) this.enemies.push(new Enemy(spec.x, spec.y, pattern));
         }
         this.spawnTimer++;
     }
@@ -489,6 +446,7 @@ class Game {
     }
 
     setupEventListeners() {
+        // Мышь
         this.canvas.addEventListener('mousemove', (e) => {
             if (this.isMobile) return;
             const rect = this.canvas.getBoundingClientRect();
@@ -499,20 +457,16 @@ class Game {
             this.player.update(this.mouseX, this.mouseY);
         });
 
+        // Клавиши
         window.addEventListener('keydown', (e) => {
-            if (e.code === 'KeyZ') {
-                this.laserKeyDown = true;
-            }
-            if (e.code === 'KeyX') {
-                this.useBomb();
-            }
+            if (e.code === 'KeyZ') this.laserKeyDown = true;
+            if (e.code === 'KeyX') this.useBomb();
         });
         window.addEventListener('keyup', (e) => {
-            if (e.code === 'KeyZ') {
-                this.laserKeyDown = false;
-            }
+            if (e.code === 'KeyZ') this.laserKeyDown = false;
         });
 
+        // Мобильное управление
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (!this.gameRunning || this.gameOver) return;
@@ -550,52 +504,44 @@ class Game {
                 const dt = Date.now() - this.touchStartTime;
                 const dx = Math.abs(this.mouseX - this.touchStartPos.x);
                 const dy = Math.abs(this.mouseY - this.touchStartPos.y);
-                if (dt < 300 && dx < 20 && dy < 20) {
-                    this.useBomb();
-                }
+                if (dt < 300 && dx < 20 && dy < 20) this.useBomb();
             }
             this.twoFingers = e.touches.length >= 2;
-            if (e.touches.length > 0) {
-                this.updateMobilePosition(e.touches);
-            }
+            if (e.touches.length > 0) this.updateMobilePosition(e.touches);
             this.touchStartPos = null;
             this.touchStartFingers = 0;
         });
 
+        // Кнопки старта и рестарта
         document.getElementById('startButton').addEventListener('click', () => {
-        this.sound.init();
-        // Запускаем фоновую музыку (если ещё не играет)
-        const bgm = document.getElementById('bgMusic');
-            if (bgm && bgm.paused) {
-            bgm.play().catch(e => console.warn('Не удалось запустить музыку:', e));
-            }
+            this.sound.init();
+            const bgm = document.getElementById('bgMusic');
+            if (bgm && bgm.paused) bgm.play().catch(e => console.warn('Музыка не запустилась:', e));
             this.startCountdown();
         });
-        
         document.getElementById('restartButton').addEventListener('click', () => {
-            this.startCountdown();        // контекст уже активен
+            this.startCountdown();
         });
 
-    // Наблюдатель видимости
-    const observer = new IntersectionObserver((entries) => {
-        const bgm = document.getElementById('bgMusic');
-        if (!bgm) return;
-        if (entries[0].isIntersecting) {
-            if (this.gameStarted && bgm.paused) bgm.play().catch(e => {});
-        } else {
-            bgm.pause();
-        }
-    }, { threshold: 0.1 });
-    observer.observe(this.canvas);
-
-    // Сообщение от родителя (Tilda)
-    window.addEventListener('message', (e) => {
-        if (e.data === 'pauseMusic') {
+        // Автопауза музыки при скрытии попапа (IntersectionObserver)
+        const observer = new IntersectionObserver((entries) => {
             const bgm = document.getElementById('bgMusic');
-            if (bgm) bgm.pause();
-        }
-    });
-}
+            if (!bgm) return;
+            if (entries[0].isIntersecting) {
+                if (this.gameStarted && bgm.paused) bgm.play().catch(e => {});
+            } else {
+                bgm.pause();
+            }
+        }, { threshold: 0 });
+        observer.observe(this.canvas);
+
+        // Сообщение от родительского окна (Тильда)
+        window.addEventListener('message', (event) => {
+            if (event.data === 'pauseMusic') {
+                const bgm = document.getElementById('bgMusic');
+                if (bgm) bgm.pause();
+            }
+        });
     }
 
     updateMobilePosition(touches) {
@@ -625,6 +571,7 @@ class Game {
         this.twoFingers = false;
         this.gameRunning = false;
         this.gameOver = false;
+        this.gameStarted = true; // важно для возобновления музыки
         this.countdown = 3;
         this.countdownTimer = 60;
         this.countdownText = '3';
@@ -634,12 +581,10 @@ class Game {
         if (this.player.useBomb()) {
             this.bullets = this.bullets.filter(b => !b.isEnemy);
             this.enemies.forEach(enemy => {
-                if (enemy.hit(3)) {
-                    this.player.score += enemy.points * 2;
-                }
+                if (enemy.hit(3)) this.player.score += enemy.points * 2;
             });
             this.enemies = this.enemies.filter(e => e.health > 0);
-            this.sound.bomb();   // звук бомбы
+            this.sound.bomb();
         }
     }
 
@@ -671,12 +616,10 @@ class Game {
                 this.bullets.push(new Bullet(this.player.x, this.player.y - 15, -Math.PI / 2, 9, false));
                 this.player.shootCooldown = 8;
             }
-            this.sound.playerShoot();   // звук выстрела игрока
+            this.sound.playerShoot();
         }
 
-        if (!this.isMobile) {
-            this.player.update(this.mouseX, this.mouseY);
-        }
+        if (!this.isMobile) this.player.update(this.mouseX, this.mouseY);
 
         this.bullets.forEach(b => b.update());
         this.bullets = this.bullets.filter(b => !b.isOffScreen());
@@ -686,9 +629,7 @@ class Game {
         this.spawnFromQueue();
         this.checkCollisions();
 
-        if (this.enemies.length === 0 && this.waveSpawnQueue.length === 0) {
-            this.nextWave();
-        }
+        if (this.enemies.length === 0 && this.waveSpawnQueue.length === 0) this.nextWave();
     }
 
     checkCollisions() {
@@ -704,7 +645,7 @@ class Game {
                         if (enemy.hit(bullet.damage || 1)) {
                             this.player.score += enemy.points;
                             this.enemies.splice(j, 1);
-                            this.sound.enemyHit();   // звук попадания
+                            this.sound.enemyHit();
                         }
                         break;
                     }
@@ -719,9 +660,7 @@ class Game {
                 const dy = bullet.y - this.player.y;
                 if (Math.sqrt(dx * dx + dy * dy) < 6) {
                     this.bullets.splice(i, 1);
-                    if (this.player.hit() && this.player.lives <= 0) {
-                        this.endGame();
-                    }
+                    if (this.player.hit() && this.player.lives <= 0) this.endGame();
                 }
             }
         }
@@ -732,9 +671,7 @@ class Game {
             const dy = enemy.y - this.player.y;
             if (Math.sqrt(dx * dx + dy * dy) < 20) {
                 this.enemies.splice(i, 1);
-                if (this.player.hit() && this.player.lives <= 0) {
-                    this.endGame();
-                }
+                if (this.player.hit() && this.player.lives <= 0) this.endGame();
             }
         }
     }
@@ -744,13 +681,12 @@ class Game {
         this.gameOver = true;
         document.getElementById('finalScore').textContent = `Счёт: ${this.player.score}`;
         document.getElementById('gameOver').classList.remove('hidden');
-        this.sound.playerDeath();   // звук смерти
+        this.sound.playerDeath();
     }
 
     drawUI() {
         for (let i = 0; i < 3; i++) {
-            const x = 20 + i * 22;
-            const y = 20;
+            const x = 20 + i * 22, y = 20;
             this.ctx.save();
             this.ctx.fillStyle = i < this.player.lives ? '#ff3366' : '#444';
             this.ctx.shadowBlur = i < this.player.lives ? 8 : 0;
@@ -807,8 +743,7 @@ class Game {
 
         this.ctx.fillStyle = '#ffffff';
         for (let i = 0; i < 30; i++) {
-            const sx = (i * 47 + 13) % 400;
-            const sy = (i * 83 + 7) % 600;
+            const sx = (i * 47 + 13) % 400, sy = (i * 83 + 7) % 600;
             this.ctx.fillRect(sx, sy, 1.5, 1.5);
         }
 
