@@ -8,21 +8,27 @@
 </head>
 <body>
     <div id="gameContainer">
+        <!-- Видео-фон (скрытый канвас для рендеринга) -->
+        <video id="bgVideo" loop muted playsinline style="display: none;">
+            <source src="assets/bg.mp4" type="video/mp4">
+        </video>
+        
         <canvas id="gameCanvas"></canvas>
 
         <!-- Загрузочный экран -->
         <div id="loadingScreen">
-            <div id="loadingBar"></div>
+            <div id="loadingBarContainer">
+                <div id="loadingBar"></div>
+            </div>
             <p id="loadingText">Загрузка...</p>
         </div>
 
         <!-- Фоновая музыка -->
         <audio id="bgMusic" loop preload="auto">
             <source src="assets/bgm.mp3" type="audio/mpeg">
-            <source src="assets/bgm.ogg" type="audio/ogg">
         </audio>
 
-        <!-- Стартовое меню (будет показано после загрузки) -->
+        <!-- Стартовое меню -->
         <div id="startScreen" class="hidden">
             <h1>BULLET HELL</h1>
             <div id="desktopControls" class="controls">
