@@ -1,4 +1,6 @@
-// Звуковой менеджер (Web Audio API синтез)
+/* ==============================
+   ЗВУКОВОЙ МЕНЕДЖЕР (без изменений)
+   ============================== */
 class SoundManager {
     constructor() {
         this.ctx = null;
@@ -39,9 +41,7 @@ class SoundManager {
         const bufferSize = this.ctx.sampleRate * duration;
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
         const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-            data[i] = Math.random() * 2 - 1;
-        }
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
         const source = this.ctx.createBufferSource();
         source.buffer = buffer;
         const gain = this.ctx.createGain();
@@ -66,13 +66,75 @@ class SoundManager {
     }
 }
 
-// ---------- Классы игры ----------
+/* ==============================
+   ЗАГРУЗЧИК РЕСУРСОВ
+   ============================== */
+const ASSETS = {
+    player: 'assets/player.png',
+    enemy_straight: 'assets/enemy_straight.png',
+    enemy_sine: 'assets/enemy_sine.png',
+    enemy_spiral: 'assets/enemy_spiral.png',
+    enemy_sweeper: 'assets/enemy_sweeper.png',
+    enemy_boss: 'assets/enemy_boss.png',
+    bullet_player: 'assets/bullet_player.png',
+    bullet_homing: 'assets/bullet_homing.png',
+    bullet_enemy: 'assets/bullet_enemy.png',
+    heart: 'assets/heart.png',
+    bomb_icon: 'assets/bomb.png',
+    background: 'assets/bg.mp4'   // необязательно
+};
+
+class AssetLoader {
+    constructor() {
+        this.images = {};
+        this.total = Object.keys(ASSETS).length;
+        this.loaded = 0;
+    }
+
+    loadAll() {
+        return new Promise((resolve, reject) => {
+            if (this.total === 0) return resolve();
+            for (let key in ASSETS) {
+                const img = new Image();
+                img.onload = () => {
+                    this.loaded++;
+                    this.updateProgress();
+                    if (this.loaded === this.total) resolve();
+                };
+                img.onerror = () => {
+                    // Заглушка: пустая картинка (чтобы не крашилось)
+                    console.warn(`Не удалось загрузить ${ASSETS[key]}`);
+                    this.loaded++;
+                    this.updateProgress();
+                    if (this.loaded === this.total) resolve();
+                };
+                img.src = ASSETS[key];
+                this.images[key] = img;
+            }
+        });
+    }
+
+    updateProgress() {
+        const bar = document.querySelector('#loadingBar');
+        if (bar) bar.style.width = `${(this.loaded / this.total) * 100}%`;
+        const text = document.querySelector('#loadingText');
+        if (text) text.textContent = `Загрузка: ${this.loaded}/${this.total}`;
+    }
+
+    get(key) {
+        return this.images[key];
+    }
+}
+
+/* ==============================
+   ИГРОВЫЕ КЛАССЫ (переписаны под спрайты)
+   ============================== */
 class Player {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.width = 16;
-        this.height = 16;
+        this.width = 24;   // размеры спрайта для подгонки
+        this.height = 24;
         this.lives = 3;
         this.bombs = 3;
         this.score = 0;
@@ -86,7 +148,6 @@ class Player {
         this.y = targetY;
         this.x = Math.max(this.width / 2, Math.min(400 - this.width / 2, this.x));
         this.y = Math.max(this.height / 2, Math.min(600 - this.height / 2, this.y));
-
         if (this.invulnerable) {
             this.invulnerableTimer--;
             if (this.invulnerableTimer <= 0) this.invulnerable = false;
@@ -94,23 +155,24 @@ class Player {
         if (this.shootCooldown > 0) this.shootCooldown--;
     }
 
-    draw(ctx) {
+    draw(ctx, assets) {
         ctx.save();
         if (!this.invulnerable || Math.floor(Date.now() / 100) % 2) {
-            ctx.fillStyle = '#00ffcc';
-            ctx.shadowBlur = 12;
-            ctx.shadowColor = '#00ffcc';
-            ctx.beginPath();
-            ctx.moveTo(this.x, this.y - 12);
-            ctx.lineTo(this.x - 8, this.y + 8);
-            ctx.lineTo(this.x + 8, this.y + 8);
-            ctx.closePath();
-            ctx.fill();
-            ctx.fillStyle = '#ffffff';
-            ctx.shadowBlur = 0;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y - 2, 3, 0, Math.PI * 2);
-            ctx.fill();
+            const img = assets.get('player');
+            if (img && img.complete && img.naturalWidth > 0) {
+                ctx.drawImage(img, this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+            } else {
+                // Заглушка
+                ctx.fillStyle = '#00ffcc';
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#00ffcc';
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y - 12);
+                ctx.lineTo(this.x - 8, this.y + 8);
+                ctx.lineTo(this.x + 8, this.y + 8);
+                ctx.closePath();
+                ctx.fill();
+            }
         }
 
         // Хитбокс (точка)
@@ -152,9 +214,8 @@ class Bullet {
         this.y = y;
         this.angle = angle;
         this.speed = speed;
-        this.radius = isEnemy ? 5 : 3;
+        this.radius = isEnemy ? 5 : 4;   // для коллизий
         this.isEnemy = isEnemy;
-        this.color = isEnemy ? '#ff4444' : '#ffee00';
         this.damage = 1;
     }
 
@@ -163,14 +224,21 @@ class Bullet {
         this.y += Math.sin(this.angle) * this.speed;
     }
 
-    draw(ctx) {
+    draw(ctx, assets) {
         ctx.save();
-        ctx.fillStyle = this.color;
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fill();
+        const key = this.isEnemy ? 'bullet_enemy' : (this instanceof HomingBullet ? 'bullet_homing' : 'bullet_player');
+        const img = assets.get(key);
+        if (img && img.complete && img.naturalWidth > 0) {
+            ctx.drawImage(img, this.x - img.width/2, this.y - img.height/2);
+        } else {
+            // Заглушка
+            ctx.fillStyle = this.isEnemy ? '#ff4444' : '#ffee00';
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
         ctx.restore();
     }
 
@@ -183,8 +251,6 @@ class HomingBullet extends Bullet {
     constructor(x, y, game) {
         super(x, y, -Math.PI / 2, 6, false);
         this.game = game;
-        this.color = '#ff44ff';
-        this.radius = 3;
         this.damage = 0.4;
         this.turnSpeed = 0.08;
     }
@@ -216,14 +282,17 @@ class HomingBullet extends Bullet {
 }
 
 class Enemy {
-    constructor(x, y, pattern) {
+    constructor(x, y, pattern, enemyType = 'straight') {
         this.x = x;
         this.y = y;
         this.pattern = pattern;
+        this.type = enemyType;   // ключ для спрайта
         this.timer = 0;
         this.health = pattern.health || 1;
         this.maxHealth = this.health;
         this.points = pattern.points || 100;
+        this.width = 28;   // под размер спрайта врага
+        this.height = 28;
     }
 
     update() {
@@ -231,14 +300,23 @@ class Enemy {
         if (this.pattern.update) this.pattern.update(this);
     }
 
-    draw(ctx) {
+    draw(ctx, assets) {
         ctx.save();
-        ctx.fillStyle = '#ff3366';
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = '#ff3366';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 14, 0, Math.PI * 2);
-        ctx.fill();
+        // Выбираем спрайт по типу врага
+        const imgKey = 'enemy_' + this.type;
+        const img = assets.get(imgKey) || assets.get('enemy_straight');
+        if (img && img.complete && img.naturalWidth > 0) {
+            ctx.drawImage(img, this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+        } else {
+            // Заглушка
+            ctx.fillStyle = '#ff3366';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#ff3366';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 14, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // Полоска здоровья
         if (this.health < this.maxHealth) {
             const barWidth = 28;
             const barHeight = 3;
@@ -256,12 +334,16 @@ class Enemy {
     }
 }
 
+/* ==============================
+   ГЛАВНЫЙ КЛАСС ИГРЫ
+   ============================== */
 class Game {
-    constructor() {
+    constructor(assets) {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.canvas.width = 400;
         this.canvas.height = 600;
+        this.assets = assets;
 
         this.isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         this.showCorrectControls();
@@ -277,7 +359,6 @@ class Game {
         this.gameRunning = false;
         this.gameOver = false;
         this.wave = 1;
-        this.waveStep = 0;
         this.waveSpawnQueue = [];
         this.spawnTimer = 0;
 
@@ -293,21 +374,25 @@ class Game {
         this.countdownTimer = 0;
         this.countdownText = '';
 
-        // ---- Для фиксированного шага времени ----
-        this.lastTime = 0;               // предыдущее время
-        this.accumulator = 0;            // накопленное время
-        this.fixedDelta = 1000 / 60;     // 16.67 мс = 60 fps
+        // Фиксированный шаг времени
+        this.lastTime = 0;
+        this.accumulator = 0;
+        this.fixedDelta = 1000 / 60;
 
         this.defineWavePatterns();
         this.setupEventListeners();
-        // Запускаем игровой цикл через requestAnimationFrame
-        requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
+
+        // Показываем стартовый экран после загрузки (скрываем загрузочный экран)
+        document.getElementById('loadingScreen').classList.add('hidden');
+        document.getElementById('startScreen').classList.remove('hidden');
+
+        requestAnimationFrame((ts) => this.gameLoop(ts));
     }
 
     defineWavePatterns() {
         this.patterns = {
             straightShooter: {
-                health: 3, points: 100,
+                health: 3, points: 100, enemyType: 'straight',
                 update: (enemy) => {
                     enemy.y += 2;
                     if (enemy.timer % 60 === 0) {
@@ -318,7 +403,7 @@ class Game {
                 }
             },
             sineFan: {
-                health: 4, points: 150,
+                health: 4, points: 150, enemyType: 'sine',
                 update: (enemy) => {
                     enemy.y += 1.8;
                     enemy.x += Math.sin(enemy.timer * 0.05) * 2.5;
@@ -332,7 +417,7 @@ class Game {
                 }
             },
             spiral: {
-                health: 6, points: 200,
+                health: 6, points: 200, enemyType: 'spiral',
                 update: (enemy) => {
                     enemy.y += 1.2;
                     if (enemy.timer % 40 === 0) {
@@ -345,7 +430,7 @@ class Game {
                 }
             },
             sideSweeper: {
-                health: 5, points: 180,
+                health: 5, points: 180, enemyType: 'sweeper',
                 update: (enemy) => {
                     if (!enemy.initialized) {
                         enemy.initialized = true;
@@ -367,7 +452,7 @@ class Game {
                 }
             },
             miniboss: {
-                health: 20, points: 500,
+                health: 20, points: 500, enemyType: 'boss',
                 update: (enemy) => {
                     enemy.y += 0.8;
                     enemy.x += Math.sin(enemy.timer * 0.02) * 2;
@@ -426,7 +511,6 @@ class Game {
 
     nextWave() {
         this.wave++;
-        this.waveStep = 0;
         this.waveSpawnQueue = this.buildWave(this.wave);
         this.spawnTimer = 0;
         this.player.score += 500 * (this.wave - 1);
@@ -441,7 +525,10 @@ class Game {
         while (this.waveSpawnQueue.length > 0 && this.spawnTimer >= this.waveSpawnQueue[0].delay) {
             const spec = this.waveSpawnQueue.shift();
             const pattern = this.patterns[spec.type];
-            if (pattern) this.enemies.push(new Enemy(spec.x, spec.y, pattern));
+            if (pattern) {
+                const enemyType = pattern.enemyType || 'straight';
+                this.enemies.push(new Enemy(spec.x, spec.y, pattern, enemyType));
+            }
         }
         this.spawnTimer++;
     }
@@ -470,6 +557,7 @@ class Game {
             if (e.code === 'KeyZ') this.laserKeyDown = false;
         });
 
+        // Touch-обработчики (аналогичны предыдущим версиям)
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (!this.gameRunning || this.gameOver) return;
@@ -525,7 +613,7 @@ class Game {
             this.startCountdown();
         });
 
-        // Автопауза при скрытии (IntersectionObserver)
+        // Автопауза музыки при скрытии (IntersectionObserver)
         const observer = new IntersectionObserver((entries) => {
             const bgm = document.getElementById('bgMusic');
             if (!bgm) return;
@@ -687,47 +775,62 @@ class Game {
     }
 
     drawUI() {
+        const heartImg = this.assets.get('heart');
         for (let i = 0; i < 3; i++) {
-            const x = 20 + i * 22, y = 20;
+            const x = 20 + i * 30, y = 20;
             this.ctx.save();
-            this.ctx.fillStyle = i < this.player.lives ? '#ff3366' : '#444';
-            this.ctx.shadowBlur = i < this.player.lives ? 8 : 0;
-            this.ctx.shadowColor = '#ff3366';
-            this.ctx.beginPath();
-            this.ctx.arc(x - 5, y - 4, 4, Math.PI, 0, false);
-            this.ctx.arc(x + 5, y - 4, 4, Math.PI, 0, false);
-            this.ctx.moveTo(x - 9, y - 2);
-            this.ctx.lineTo(x, y + 8);
-            this.ctx.lineTo(x + 9, y - 2);
-            this.ctx.fill();
+            if (i < this.player.lives) {
+                if (heartImg && heartImg.complete) {
+                    this.ctx.drawImage(heartImg, x, y, 20, 20);
+                } else {
+                    this.ctx.fillStyle = '#ff3366';
+                    this.ctx.shadowBlur = 8;
+                    this.ctx.shadowColor = '#ff3366';
+                    this.ctx.beginPath();
+                    this.ctx.arc(x+10, y+10, 8, 0, Math.PI*2);
+                    this.ctx.fill();
+                }
+            } else {
+                this.ctx.globalAlpha = 0.3;
+                if (heartImg && heartImg.complete) {
+                    this.ctx.drawImage(heartImg, x, y, 20, 20);
+                } else {
+                    this.ctx.fillStyle = '#444';
+                    this.ctx.beginPath();
+                    this.ctx.arc(x+10, y+10, 8, 0, Math.PI*2);
+                    this.ctx.fill();
+                }
+                this.ctx.globalAlpha = 1;
+            }
             this.ctx.restore();
         }
 
-        const bombY = 580;
+        const bombImg = this.assets.get('bomb_icon');
         for (let i = 0; i < 3; i++) {
-            const x = 160 + i * 40;
+            const x = 160 + i * 40, y = 570;
             this.ctx.save();
-            this.ctx.fillStyle = '#222';
-            this.ctx.strokeStyle = i < this.player.bombs ? '#ffaa00' : '#555';
-            this.ctx.shadowBlur = i < this.player.bombs ? 8 : 0;
-            this.ctx.shadowColor = '#ffaa00';
-            this.ctx.beginPath();
-            this.ctx.arc(x, bombY, 8, 0, Math.PI * 2);
-            this.ctx.fill();
-            this.ctx.stroke();
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, bombY - 8);
-            this.ctx.lineTo(x + 4, bombY - 14);
-            this.ctx.strokeStyle = '#ffaa00';
-            this.ctx.lineWidth = 2;
-            this.ctx.stroke();
             if (i < this.player.bombs) {
-                this.ctx.fillStyle = '#ff4400';
-                this.ctx.shadowBlur = 6;
-                this.ctx.shadowColor = '#ff4400';
-                this.ctx.beginPath();
-                this.ctx.arc(x + 4, bombY - 16, 3, 0, 2 * Math.PI);
-                this.ctx.fill();
+                if (bombImg && bombImg.complete) {
+                    this.ctx.drawImage(bombImg, x, y, 28, 28);
+                } else {
+                    this.ctx.fillStyle = '#ffaa00';
+                    this.ctx.shadowBlur = 8;
+                    this.ctx.shadowColor = '#ffaa00';
+                    this.ctx.beginPath();
+                    this.ctx.arc(x+14, y+14, 10, 0, Math.PI*2);
+                    this.ctx.fill();
+                }
+            } else {
+                this.ctx.globalAlpha = 0.3;
+                if (bombImg && bombImg.complete) {
+                    this.ctx.drawImage(bombImg, x, y, 28, 28);
+                } else {
+                    this.ctx.fillStyle = '#555';
+                    this.ctx.beginPath();
+                    this.ctx.arc(x+14, y+14, 10, 0, Math.PI*2);
+                    this.ctx.fill();
+                }
+                this.ctx.globalAlpha = 1;
             }
             this.ctx.restore();
         }
@@ -740,18 +843,23 @@ class Game {
     }
 
     draw() {
-        this.ctx.fillStyle = '#0a0a1a';
-        this.ctx.fillRect(0, 0, 400, 600);
-
-        this.ctx.fillStyle = '#ffffff';
-        for (let i = 0; i < 30; i++) {
-            const sx = (i * 47 + 13) % 400, sy = (i * 83 + 7) % 600;
-            this.ctx.fillRect(sx, sy, 1.5, 1.5);
+        // Фон
+        const bgImg = this.assets.get('background');
+        if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
+            this.ctx.drawImage(bgImg, 0, 0, 400, 600);
+        } else {
+            this.ctx.fillStyle = '#0a0a1a';
+            this.ctx.fillRect(0, 0, 400, 600);
+            this.ctx.fillStyle = '#ffffff';
+            for (let i = 0; i < 30; i++) {
+                const sx = (i * 47 + 13) % 400, sy = (i * 83 + 7) % 600;
+                this.ctx.fillRect(sx, sy, 1.5, 1.5);
+            }
         }
 
-        this.enemies.forEach(e => e.draw(this.ctx));
-        this.bullets.forEach(b => b.draw(this.ctx));
-        this.player.draw(this.ctx);
+        this.enemies.forEach(e => e.draw(this.ctx, this.assets));
+        this.bullets.forEach(b => b.draw(this.ctx, this.assets));
+        this.player.draw(this.ctx, this.assets);
         this.drawUI();
 
         if (this.countdown > 0 && this.countdownText) {
@@ -769,29 +877,29 @@ class Game {
     }
 
     gameLoop(timestamp) {
-        // Рассчитываем прошедшее время
         if (this.lastTime === 0) this.lastTime = timestamp;
         let delta = timestamp - this.lastTime;
         this.lastTime = timestamp;
-
-        // Предотвращаем слишком большой delta (например, после паузы)
         if (delta > 1000) delta = 1000;
 
-        // Накапливаем время
         this.accumulator += delta;
-
-        // Выполняем фиксированные шаги обновления (60 раз в секунду)
         while (this.accumulator >= this.fixedDelta) {
-            this.update(); // один шаг = 1/60 сек
+            this.update();
             this.accumulator -= this.fixedDelta;
         }
 
-        // Отрисовываем каждый кадр (с той частотой, которая доступна)
         this.draw();
-
-        // Запускаем следующий кадр
-        requestAnimationFrame((nextTimestamp) => this.gameLoop(nextTimestamp));
+        requestAnimationFrame((ts) => this.gameLoop(ts));
     }
 }
 
-const game = new Game();
+/* ==============================
+   ТОЧКА ВХОДА (загрузка ассетов)
+   ============================== */
+window.addEventListener('load', () => {
+    const loader = new AssetLoader();
+    loader.loadAll().then(() => {
+        // Загружено – создаём игру, скроется loadingScreen внутри конструктора
+        new Game(loader);
+    });
+});
