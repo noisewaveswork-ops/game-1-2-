@@ -10,14 +10,20 @@
     <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
 
-        <!-- Фоновая музыка: замените src на вашу ссылку -->
+        <!-- Загрузочный экран -->
+        <div id="loadingScreen">
+            <div id="loadingBar"></div>
+            <p id="loadingText">Загрузка...</p>
+        </div>
+
+        <!-- Фоновая музыка -->
         <audio id="bgMusic" loop preload="auto">
-            <!-- MP3 (основной) -->
-            <source src="bgm.mp3">
+            <source src="assets/bgm.mp3" type="audio/mpeg">
+            <source src="assets/bgm.ogg" type="audio/ogg">
         </audio>
 
-        <!-- Стартовое меню -->
-        <div id="startScreen">
+        <!-- Стартовое меню (будет показано после загрузки) -->
+        <div id="startScreen" class="hidden">
             <h1>BULLET HELL</h1>
             <div id="desktopControls" class="controls">
                 <p>🖱️ Мышь — движение</p>
@@ -33,6 +39,7 @@
             </div>
             <button id="startButton">ИГРАТЬ</button>
         </div>
+
         <!-- Экран окончания игры -->
         <div id="gameOver" class="hidden">
             <h2>Игра окончена!</h2>
