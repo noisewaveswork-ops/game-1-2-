@@ -740,13 +740,7 @@ class Game {
     }
 
     draw() {
-        this.ctx.fillStyle = '#0a0a1a';
-        this.ctx.fillRect(0, 0, 400, 600);
-
-        this.ctx.fillStyle = '#ffffff';
-        for (let i = 0; i < 30; i++) {
-            const sx = (i * 47 + 13) % 400, sy = (i * 83 + 7) % 600;
-            this.ctx.fillRect(sx, sy, 1.5, 1.5);
+        this.ctx.clearRect(0, 0, 400, 600);
         }
 
         this.enemies.forEach(e => e.draw(this.ctx));
