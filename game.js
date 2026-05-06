@@ -4,7 +4,6 @@ class Player {
         this.y = y;
         this.width = 16;
         this.height = 16;
-        this.speed = 6; // всё равно не используется при прямом следовании
         this.lives = 3;
         this.bombs = 3;
         this.score = 0;
@@ -14,7 +13,7 @@ class Player {
     }
 
     update(targetX, targetY) {
-        // Мгновенное прилипание к курсору/пальцу
+        // Мгновенное прилипание
         this.x = targetX;
         this.y = targetY;
 
@@ -53,7 +52,7 @@ class Player {
             ctx.fill();
         }
 
-        // Хитбокс (яркая точка в центре)
+        // Хитбокс (точка по центру)
         ctx.fillStyle = '#ffffff';
         ctx.shadowBlur = 8;
         ctx.shadowColor = '#ff0000';
@@ -167,7 +166,7 @@ class Game {
         this.canvas.width = 400;
         this.canvas.height = 600;
 
-        // Определяем, мобильное устройство или нет
+        // Определяем тип устройства
         this.isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         this.showCorrectControls();
 
@@ -182,14 +181,18 @@ class Game {
         this.waveTimer = 0;
         this.enemiesSpawned = 0;
 
-        // Состояние управления
-        this.laserMode = false;       // true = два лазера
-        this.laserKeyDown = false;    // зажата Z
-        this.twoFingers = false;      // два пальца на экране
-        this.bombUsed = false;
+        // Управление
+        this.laserMode = false;
+        this.laserKeyDown = false;
+        this.twoFingers = false;
+        
+        // Для мобильного тапа
+        this.touchStartTime = 0;
+        this.touchStartPos = null;
+        this.touchStartFingers = 0;
 
         // Обратный отсчёт
-        this.countdown = 0;           // 0 = нет отсчёта
+        this.countdown = 0;
         this.countdownTimer = 0;
         this.countdownText = '';
 
@@ -198,36 +201,29 @@ class Game {
     }
 
     showCorrectControls() {
-        if (this.isMobile) {
-            document.getElementById('desktopControls').classList.add('hidden');
-            document.getElementById('mobileControls').classList.remove('hidden');
-        } else {
-            document.getElementById('desktopControls').classList.remove('hidden');
-            document.getElementById('mobileControls').classList.add('hidden');
-        }
+        document.getElementById('desktopControls').classList.toggle('hidden', this.isMobile);
+        document.getElementById('mobileControls').classList.toggle('hidden', !this.isMobile);
     }
 
     setupEventListeners() {
-        // Мышь
+        // Мышь (десктоп)
         this.canvas.addEventListener('mousemove', (e) => {
+            if (this.isMobile) return;
             const rect = this.canvas.getBoundingClientRect();
             const scaleX = this.canvas.width / rect.width;
             const scaleY = this.canvas.height / rect.height;
             this.mouseX = (e.clientX - rect.left) * scaleX;
             this.mouseY = (e.clientY - rect.top) * scaleY;
-            // Для мыши прилипаем точно
-            if (!this.isMobile) {
-                this.player.update(this.mouseX, this.mouseY);
-            }
+            this.player.update(this.mouseX, this.mouseY);
         });
 
-        // Клавиши Z и X (десктоп)
+        // Клавиши Z и X
         window.addEventListener('keydown', (e) => {
             if (e.code === 'KeyZ') {
                 this.laserKeyDown = true;
             }
             if (e.code === 'KeyX') {
-                this.useBomb(); // однократно по нажатию
+                this.useBomb();
             }
         });
         window.addEventListener('keyup', (e) => {
@@ -240,19 +236,24 @@ class Game {
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (!this.gameRunning || this.gameOver) return;
+            
             const touches = e.touches;
-            // Определяем два пальца
             this.twoFingers = touches.length >= 2;
-
-            // Если один палец, запоминаем для тапа (бомба)
+            this.touchStartFingers = touches.length;
+            
             if (touches.length === 1) {
+                // Запоминаем начало для тапа
                 this.touchStartTime = Date.now();
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                const touch = touches[0];
                 this.touchStartPos = {
-                    x: touches[0].clientX,
-                    y: touches[0].clientY
+                    x: (touch.clientX - rect.left) * scaleX,
+                    y: (touch.clientY - rect.top) * scaleY
                 };
             }
-            this.updateMobilePosition(e.touches);
+            this.updateMobilePosition(touches);
         }, { passive: false });
 
         this.canvas.addEventListener('touchmove', (e) => {
@@ -264,27 +265,31 @@ class Game {
 
         this.canvas.addEventListener('touchend', (e) => {
             e.preventDefault();
-            if (!this.gameRunning || this.gameOver) return;
+            if (!this.gameRunning || this.gameOver) {
+                this.twoFingers = false;
+                return;
+            }
 
-            // Проверяем тап для бомбы (один палец, короткое нажатие)
-            if (e.touches.length === 0 && this.touchStartPos) {
+            // Проверка тапа для бомбы (только если изначально был 1 палец)
+            if (this.touchStartFingers === 1 && this.touchStartPos) {
                 const dt = Date.now() - this.touchStartTime;
-                const dx = this.mouseX - this.touchStartPos.x * (this.canvas.width / this.canvas.getBoundingClientRect().width); // грубо
-                const dy = this.mouseY - this.touchStartPos.y * (this.canvas.height / this.canvas.getBoundingClientRect().height);
-                if (dt < 300 && Math.abs(dx) < 15 && Math.abs(dy) < 15) {
+                const dx = Math.abs(this.mouseX - this.touchStartPos.x);
+                const dy = Math.abs(this.mouseY - this.touchStartPos.y);
+                if (dt < 300 && dx < 20 && dy < 20) {
                     this.useBomb();
                 }
-                this.touchStartPos = null;
             }
+            
+            // Обновляем количество пальцев
             this.twoFingers = e.touches.length >= 2;
-            if (e.touches.length === 0) {
-                this.twoFingers = false;
-            } else {
+            if (e.touches.length > 0) {
                 this.updateMobilePosition(e.touches);
             }
+            this.touchStartPos = null;
+            this.touchStartFingers = 0;
         });
 
-        // Кнопки старта и рестарта
+        // Кнопки
         document.getElementById('startButton').addEventListener('click', () => {
             this.startCountdown();
         });
@@ -298,22 +303,19 @@ class Game {
         const rect = this.canvas.getBoundingClientRect();
         const scaleX = this.canvas.width / rect.width;
         const scaleY = this.canvas.height / rect.height;
-        // Используем касание главного пальца (первого)
         const touch = touches[0];
         let tx = (touch.clientX - rect.left) * scaleX;
         let ty = (touch.clientY - rect.top) * scaleY;
         // Смещение вверх, чтобы корабль был над пальцем
-        ty = Math.max(20, ty - 80); // не выше 20 пикселей от верха
+        ty = Math.max(20, ty - 80);
         this.player.update(tx, ty);
         this.mouseX = tx;
         this.mouseY = ty;
     }
 
     startCountdown() {
-        // Скрываем меню и game over
         document.getElementById('startScreen').classList.add('hidden');
         document.getElementById('gameOver').classList.add('hidden');
-        // Сброс игры
         this.player = new Player(200, 500);
         this.bullets = [];
         this.enemies = [];
@@ -323,10 +325,10 @@ class Game {
         this.laserMode = false;
         this.laserKeyDown = false;
         this.twoFingers = false;
-        this.gameRunning = false; // пока не стартуем
+        this.gameRunning = false;
         this.gameOver = false;
         this.countdown = 3;
-        this.countdownTimer = 60; // 1 секунда при 60 fps
+        this.countdownTimer = 60;
         this.countdownText = '3';
     }
 
@@ -380,7 +382,7 @@ class Game {
                     this.countdownTimer = 60;
                 } else {
                     this.countdownText = '';
-                    this.gameRunning = true; // старт игры
+                    this.gameRunning = true;
                 }
             }
             return;
@@ -388,36 +390,35 @@ class Game {
 
         if (!this.gameRunning || this.gameOver) return;
 
-        // Режим стрельбы: лазеры если зажат Z (десктоп) или два пальца (мобильный)
+        // Режим лазеров
         this.laserMode = this.laserKeyDown || this.twoFingers;
 
         // Автострельба
         if (this.player.shootCooldown <= 0) {
             if (this.laserMode) {
-                // Два лазера под углами -35° и +35° от вертикали (вверх = -PI/2)
+                // Два лазера под углом 20 градусов
                 const baseAngle = -Math.PI / 2;
-                const spread = 35 * Math.PI / 180;
+                const spread = 20 * Math.PI / 180;
                 this.bullets.push(new Bullet(this.player.x, this.player.y - 5, baseAngle - spread, 9, false));
                 this.bullets.push(new Bullet(this.player.x, this.player.y - 5, baseAngle + spread, 9, false));
-                this.player.shootCooldown = 10; // чуть медленнее, т.к. два выстрела
+                this.player.shootCooldown = 10; // интервал
             } else {
-                // Обычный одиночный
+                // Обычный одиночный выстрел (реже)
                 this.bullets.push(new Bullet(this.player.x, this.player.y - 15, -Math.PI / 2, 9, false));
-                this.player.shootCooldown = 6;
+                this.player.shootCooldown = 8; // увеличено с 6 до 8
             }
         }
 
-        // Движение игрока (для мыши уже обновляется в mousemove, но на мобильных тоже обновляется постоянно)
-        // На десктопе вызываем update здесь для плавности
+        // Обновление игрока (для десктопа уже сделано в mousemove, для мобильных в touch)
         if (!this.isMobile) {
             this.player.update(this.mouseX, this.mouseY);
-        } // на мобильных update вызывается в touch-обработчиках
+        }
 
-        // Обновление пуль
+        // Пули
         this.bullets.forEach(b => b.update());
         this.bullets = this.bullets.filter(b => !b.isOffScreen());
 
-        // Обновление врагов и спавн
+        // Враги и спавн
         if (this.enemiesSpawned < this.wave * 5) {
             this.waveTimer++;
             if (this.waveTimer > 50) {
@@ -459,13 +460,13 @@ class Game {
             }
         }
 
-        // Вражеские пули → игрок (хитбокс - центр)
+        // Вражеские пули → игрок (хитбокс ~6px)
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const bullet = this.bullets[i];
             if (bullet.isEnemy) {
                 const dx = bullet.x - this.player.x;
                 const dy = bullet.y - this.player.y;
-                if (Math.sqrt(dx * dx + dy * dy) < 6) { // маленький радиус хитбокса
+                if (Math.sqrt(dx * dx + dy * dy) < 6) {
                     this.bullets.splice(i, 1);
                     if (this.player.hit() && this.player.lives <= 0) {
                         this.endGame();
@@ -496,7 +497,7 @@ class Game {
     }
 
     drawUI() {
-        // Жизни (сердечки)
+        // Сердечки
         for (let i = 0; i < 3; i++) {
             const x = 20 + i * 22;
             const y = 20;
@@ -514,7 +515,7 @@ class Game {
             this.ctx.restore();
         }
 
-        // Бомбы (иконки внизу по центру)
+        // Бомбы
         const bombY = 580;
         for (let i = 0; i < 3; i++) {
             const x = 160 + i * 40;
@@ -527,7 +528,7 @@ class Game {
             this.ctx.arc(x, bombY, 8, 0, Math.PI * 2);
             this.ctx.fill();
             this.ctx.stroke();
-            // фитиль
+            // Фитиль
             this.ctx.beginPath();
             this.ctx.moveTo(x, bombY - 8);
             this.ctx.lineTo(x + 4, bombY - 14);
@@ -570,7 +571,7 @@ class Game {
         this.player.draw(this.ctx);
         this.drawUI();
 
-        // Обратный отсчёт на весь экран
+        // Обратный отсчёт
         if (this.countdown > 0 && this.countdownText) {
             this.ctx.save();
             this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
