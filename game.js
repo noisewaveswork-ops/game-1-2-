@@ -576,19 +576,26 @@ class Game {
             this.startCountdown();        // контекст уже активен
         });
 
-        // Обработчик сообщений от родительского окна (для остановки музыки при закрытии попапа)
-    window.addEventListener('message', (event) => {
-    // Проверяем источник, если нужно (рекомендуется для безопасности)
-    if (event.origin !== 'https://project13154549.tilda.ws') return;
-    
-        if (event.data === 'stopMusic') {
+    // Наблюдатель видимости
+    const observer = new IntersectionObserver((entries) => {
+        const bgm = document.getElementById('bgMusic');
+        if (!bgm) return;
+        if (entries[0].isIntersecting) {
+            if (this.gameStarted && bgm.paused) bgm.play().catch(e => {});
+        } else {
+            bgm.pause();
+        }
+    }, { threshold: 0.1 });
+    observer.observe(this.canvas);
+
+    // Сообщение от родителя (Tilda)
+    window.addEventListener('message', (e) => {
+        if (e.data === 'pauseMusic') {
             const bgm = document.getElementById('bgMusic');
-            if (bgm) {
-                bgm.pause();
-                  bgm.currentTime = 0; // сбросить на начало, если нужно
-            }
-           }
-        });
+            if (bgm) bgm.pause();
+        }
+    });
+}
     }
 
     updateMobilePosition(touches) {
