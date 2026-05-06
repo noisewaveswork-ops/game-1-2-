@@ -1,3 +1,91 @@
+// Звуковой менеджер (Web Audio API синтез)
+class SoundManager {
+    constructor() {
+        this.ctx = null;
+        this.initialized = false;
+    }
+
+    init() {
+        if (this.initialized) return;
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            // Разблокируем на мобильных (пустой звук)
+            const buf = this.ctx.createBuffer(1, 1, 22050);
+            const src = this.ctx.createBufferSource();
+            src.buffer = buf;
+            src.connect(this.ctx.destination);
+            src.start(0);
+        } catch(e) {
+            console.warn('Web Audio API не поддерживается');
+        }
+        this.initialized = true;
+    }
+
+    playTone(freq, duration, type = 'square', volume = 0.15) {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+    }
+
+    playNoise(duration, volume = 0.2) {
+        if (!this.ctx) return;
+        const bufferSize = this.ctx.sampleRate * duration;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+        const source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+        source.connect(gain);
+        gain.connect(this.ctx.destination);
+        source.start();
+    }
+
+    playerShoot() {
+        this.playTone(880, 0.05, 'square', 0.08);
+    }
+
+    enemyShoot() {
+        this.playTone(440, 0.08, 'square', 0.06);
+    }
+
+    enemyHit() {
+        this.playNoise(0.03, 0.1);
+    }
+
+    bomb() {
+        this.playNoise(0.5, 0.25);
+        // Дополнительный низкий гул для эпичности
+        if (this.ctx) {
+            setTimeout(() => this.playTone(80, 0.3, 'sawtooth', 0.2), 50);
+        }
+    }
+
+    playerDeath() {
+        this.playTone(150, 0.8, 'sawtooth', 0.2);
+    }
+
+    waveStart() {
+        this.playTone(880, 0.1, 'square', 0.1);
+        if (this.ctx) {
+            setTimeout(() => this.playTone(1100, 0.1, 'square', 0.1), 100);
+        }
+    }
+}
+
+// ---------- Классы игры ----------
 class Player {
     constructor(x, y) {
         this.x = x;
@@ -203,6 +291,8 @@ class Game {
         this.isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         this.showCorrectControls();
 
+        this.sound = new SoundManager();   // менеджер звуков
+
         this.player = new Player(200, 500);
         this.bullets = [];
         this.enemies = [];
@@ -242,6 +332,7 @@ class Game {
                     if (enemy.timer % 60 === 0) {
                         const angle = Math.atan2(game.player.y - enemy.y, game.player.x - enemy.x);
                         game.bullets.push(new Bullet(enemy.x, enemy.y, angle, 3, true));
+                        game.sound.enemyShoot();
                     }
                 }
             },
@@ -256,6 +347,7 @@ class Game {
                         for (let i = -1; i <= 1; i++) {
                             game.bullets.push(new Bullet(enemy.x, enemy.y, baseAngle + i * 0.3, 3.5, true));
                         }
+                        game.sound.enemyShoot();
                     }
                 }
             },
@@ -269,6 +361,7 @@ class Game {
                             const angle = (Math.PI * 2 / 6) * i + enemy.timer * 0.05;
                             game.bullets.push(new Bullet(enemy.x, enemy.y, angle, 2.5, true));
                         }
+                        game.sound.enemyShoot();
                     }
                 }
             },
@@ -288,6 +381,7 @@ class Game {
                             setTimeout(() => {
                                 if (enemy.health > 0) {
                                     game.bullets.push(new Bullet(enemy.x, enemy.y, angle, 4, true));
+                                    game.sound.enemyShoot();
                                 }
                             }, j * 100);
                         }
@@ -305,12 +399,14 @@ class Game {
                             const angle = (Math.PI * 2 / 12) * i + enemy.timer * 0.1;
                             game.bullets.push(new Bullet(enemy.x, enemy.y, angle, 2.2, true));
                         }
+                        game.sound.enemyShoot();
                     }
                     if (enemy.timer % 90 === 0) {
                         const base = Math.atan2(game.player.y - enemy.y, game.player.x - enemy.x);
                         for (let i = -2; i <= 2; i++) {
                             game.bullets.push(new Bullet(enemy.x, enemy.y, base + i * 0.2, 3, true));
                         }
+                        game.sound.enemyShoot();
                     }
                 }
             }
@@ -366,6 +462,7 @@ class Game {
         this.waveSpawnQueue = this.buildWave(this.wave);
         this.spawnTimer = 0;
         this.player.score += 500 * (this.wave - 1);
+        if (this.wave > 1) this.sound.waveStart();  // звук начала новой волны
     }
 
     spawnFromQueue() {
@@ -466,10 +563,11 @@ class Game {
         });
 
         document.getElementById('startButton').addEventListener('click', () => {
+            this.sound.init();            // активируем аудиоконтекст при первом взаимодействии
             this.startCountdown();
         });
         document.getElementById('restartButton').addEventListener('click', () => {
-            this.startCountdown();
+            this.startCountdown();        // контекст уже активен
         });
     }
 
@@ -514,6 +612,7 @@ class Game {
                 }
             });
             this.enemies = this.enemies.filter(e => e.health > 0);
+            this.sound.bomb();   // звук бомбы
         }
     }
 
@@ -545,6 +644,7 @@ class Game {
                 this.bullets.push(new Bullet(this.player.x, this.player.y - 15, -Math.PI / 2, 9, false));
                 this.player.shootCooldown = 8;
             }
+            this.sound.playerShoot();   // звук выстрела игрока
         }
 
         if (!this.isMobile) {
@@ -555,8 +655,7 @@ class Game {
         this.bullets = this.bullets.filter(b => !b.isOffScreen());
 
         this.enemies.forEach(e => e.update());
-        // Удаляем врагов, ушедших за нижнюю границу экрана
-        this.enemies = this.enemies.filter(e => e.y < 620 + 20); // 620 = высота канваса, +20 для надёжности
+        this.enemies = this.enemies.filter(e => e.y < 620 + 20);
         this.spawnFromQueue();
         this.checkCollisions();
 
@@ -578,6 +677,7 @@ class Game {
                         if (enemy.hit(bullet.damage || 1)) {
                             this.player.score += enemy.points;
                             this.enemies.splice(j, 1);
+                            this.sound.enemyHit();   // звук попадания
                         }
                         break;
                     }
@@ -617,6 +717,7 @@ class Game {
         this.gameOver = true;
         document.getElementById('finalScore').textContent = `Счёт: ${this.player.score}`;
         document.getElementById('gameOver').classList.remove('hidden');
+        this.sound.playerDeath();   // звук смерти
     }
 
     drawUI() {
