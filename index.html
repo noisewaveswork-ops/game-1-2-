@@ -9,8 +9,10 @@
 <body>
     <div id="gameContainer">
         <!-- Видео-фон (бесшовная анимация) -->
-        <video id="bgVideo" autoplay muted loop playsinline>
+        <video id="bgVideo" autoplay muted loop playsinline 
+           style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; border: 2px solid #333;">
             <source src="assets/bg.mp4" type="video/mp4">
+        <!-- Если видео не загрузится, будет тёмный фон -->
         </video>
         
         <canvas id="gameCanvas"></canvas>
