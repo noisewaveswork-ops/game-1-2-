@@ -740,27 +740,27 @@ class Game {
     }
 
     draw() {
-        this.ctx.clearRect(0, 0, 400, 600);
-        
+    // Прозрачный фон — видео будет видно
+    this.ctx.clearRect(0, 0, 400, 600);
 
-        this.enemies.forEach(e => e.draw(this.ctx));
-        this.bullets.forEach(b => b.draw(this.ctx));
-        this.player.draw(this.ctx);
-        this.drawUI();
+    this.enemies.forEach(e => e.draw(this.ctx));
+    this.bullets.forEach(b => b.draw(this.ctx));
+    this.player.draw(this.ctx);
+    this.drawUI();
 
-        if (this.countdown > 0 && this.countdownText) {
-            this.ctx.save();
-            this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            this.ctx.fillRect(0, 0, 400, 600);
-            this.ctx.font = 'bold 120px Arial';
-            this.ctx.fillStyle = '#ffffff';
-            this.ctx.textAlign = 'center';
-            this.ctx.shadowBlur = 20;
-            this.ctx.shadowColor = '#ff0000';
-            this.ctx.fillText(this.countdownText, 200, 320);
-            this.ctx.restore();
-        }
+    if (this.countdown > 0 && this.countdownText) {
+        this.ctx.save();
+        this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        this.ctx.fillRect(0, 0, 400, 600);
+        this.ctx.font = 'bold 120px Arial';
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.textAlign = 'center';
+        this.ctx.shadowBlur = 20;
+        this.ctx.shadowColor = '#ff0000';
+        this.ctx.fillText(this.countdownText, 200, 320);
+        this.ctx.restore();
     }
+}
 
     gameLoop(timestamp) {
         // Рассчитываем прошедшее время
