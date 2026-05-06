@@ -86,7 +86,7 @@ class Bullet {
         this.radius = isEnemy ? 5 : 3;
         this.isEnemy = isEnemy;
         this.color = isEnemy ? '#ff4444' : '#ffee00';
-        this.damage = 1; // для вражеских не используется
+        this.damage = 1;
     }
 
     update() {
@@ -112,16 +112,15 @@ class Bullet {
 
 class HomingBullet extends Bullet {
     constructor(x, y, game) {
-        super(x, y, -Math.PI / 2, 6, false); // начальный угол вверх
+        super(x, y, -Math.PI / 2, 6, false);
         this.game = game;
-        this.color = '#ff44ff'; // фиолетовый
+        this.color = '#ff44ff';
         this.radius = 3;
-        this.damage = 0.4; // уменьшенный урон
-        this.turnSpeed = 0.08; // радиан/кадр
+        this.damage = 0.4;
+        this.turnSpeed = 0.08;
     }
 
     update() {
-        // Ищем ближайшего врага
         const enemies = this.game.enemies;
         let closestEnemy = null;
         let closestDist = Infinity;
@@ -138,11 +137,8 @@ class HomingBullet extends Bullet {
         if (closestEnemy) {
             const desiredAngle = Math.atan2(closestEnemy.y - this.y, closestEnemy.x - this.x);
             let angleDiff = desiredAngle - this.angle;
-            // Нормализуем угол в [-PI, PI]
             while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
             while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-
-            // Поворачиваем в сторону желаемого угла
             if (angleDiff > this.turnSpeed) {
                 this.angle += this.turnSpeed;
             } else if (angleDiff < -this.turnSpeed) {
@@ -151,8 +147,6 @@ class HomingBullet extends Bullet {
                 this.angle = desiredAngle;
             }
         }
-        // иначе летим в текущем направлении (вверх, если врагов нет)
-
         super.update();
     }
 }
@@ -371,8 +365,8 @@ class Game {
         const x = Math.random() * 340 + 30;
         const y = -30;
         const patterns = [
-            { health: 1, points: 100, update: (enemy) => { enemy.y += 2.5; } },
-            { health: 3, points: 300, update: (enemy) => {
+            { health: 5, points: 100, update: (enemy) => { enemy.y += 2.5; } },
+            { health: 15, points: 300, update: (enemy) => {
                 enemy.y += 1.2;
                 enemy.x += Math.sin(enemy.timer * 0.04) * 4;
                 if (enemy.timer % 25 === 0) {
@@ -382,7 +376,7 @@ class Game {
                     }
                 }
             }},
-            { health: 2, points: 200, update: (enemy) => {
+            { health: 10, points: 200, update: (enemy) => {
                 enemy.y += 2;
                 if (enemy.timer % 40 === 0) {
                     const angle = Math.atan2(game.player.y - enemy.y, game.player.x - enemy.x);
@@ -414,14 +408,11 @@ class Game {
 
         this.laserMode = this.laserKeyDown || this.twoFingers;
 
-        // Автострельба
         if (this.player.shootCooldown <= 0) {
             if (this.laserMode) {
-                // Самонаводящаяся пуля
                 this.bullets.push(new HomingBullet(this.player.x, this.player.y - 5, this));
-                this.player.shootCooldown = 10; // немного реже
+                this.player.shootCooldown = 10;
             } else {
-                // Обычная пуля
                 this.bullets.push(new Bullet(this.player.x, this.player.y - 15, -Math.PI / 2, 9, false));
                 this.player.shootCooldown = 8;
             }
@@ -454,7 +445,6 @@ class Game {
     }
 
     checkCollisions() {
-        // Пули игрока → враги
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const bullet = this.bullets[i];
             if (!bullet.isEnemy) {
@@ -474,7 +464,6 @@ class Game {
             }
         }
 
-        // Вражеские пули → игрок
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const bullet = this.bullets[i];
             if (bullet.isEnemy) {
@@ -489,7 +478,6 @@ class Game {
             }
         }
 
-        // Враги → игрок
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             const enemy = this.enemies[i];
             const dx = enemy.x - this.player.x;
