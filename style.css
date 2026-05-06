@@ -20,6 +20,7 @@ body {
     width: 100%;
     max-width: 400px;
     aspect-ratio: 2/3;
+    background: #0a0a1a; /* временный фон, пока нет видео */
 }
 
 /* Видео-фон */
