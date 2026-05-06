@@ -575,6 +575,20 @@ class Game {
         document.getElementById('restartButton').addEventListener('click', () => {
             this.startCountdown();        // контекст уже активен
         });
+
+        // Обработчик сообщений от родительского окна (для остановки музыки при закрытии попапа)
+    window.addEventListener('message', (event) => {
+    // Проверяем источник, если нужно (рекомендуется для безопасности)
+    if (event.origin !== 'https://project13154549.tilda.ws') return;
+    
+        if (event.data === 'stopMusic') {
+            const bgm = document.getElementById('bgMusic');
+            if (bgm) {
+                bgm.pause();
+                  bgm.currentTime = 0; // сбросить на начало, если нужно
+            }
+           }
+        });
     }
 
     updateMobilePosition(touches) {
