@@ -13,28 +13,21 @@ class Player {
     }
 
     update(targetX, targetY) {
-        // Мгновенное прилипание
         this.x = targetX;
         this.y = targetY;
-
-        // Границы
         this.x = Math.max(this.width / 2, Math.min(400 - this.width / 2, this.x));
         this.y = Math.max(this.height / 2, Math.min(600 - this.height / 2, this.y));
 
-        // Неуязвимость
         if (this.invulnerable) {
             this.invulnerableTimer--;
             if (this.invulnerableTimer <= 0) this.invulnerable = false;
         }
-
-        // Кулдаун стрельбы
         if (this.shootCooldown > 0) this.shootCooldown--;
     }
 
     draw(ctx) {
         ctx.save();
         if (!this.invulnerable || Math.floor(Date.now() / 100) % 2) {
-            // Корпус корабля
             ctx.fillStyle = '#00ffcc';
             ctx.shadowBlur = 12;
             ctx.shadowColor = '#00ffcc';
@@ -44,7 +37,6 @@ class Player {
             ctx.lineTo(this.x + 8, this.y + 8);
             ctx.closePath();
             ctx.fill();
-            // Кабина
             ctx.fillStyle = '#ffffff';
             ctx.shadowBlur = 0;
             ctx.beginPath();
@@ -52,7 +44,7 @@ class Player {
             ctx.fill();
         }
 
-        // Хитбокс (точка по центру)
+        // Хитбокс (точка)
         ctx.fillStyle = '#ffffff';
         ctx.shadowBlur = 8;
         ctx.shadowColor = '#ff0000';
@@ -63,7 +55,6 @@ class Player {
         ctx.lineWidth = 1.5;
         ctx.shadowBlur = 0;
         ctx.stroke();
-
         ctx.restore();
     }
 
@@ -95,6 +86,7 @@ class Bullet {
         this.radius = isEnemy ? 5 : 3;
         this.isEnemy = isEnemy;
         this.color = isEnemy ? '#ff4444' : '#ffee00';
+        this.damage = 1; // для вражеских не используется
     }
 
     update() {
@@ -115,6 +107,53 @@ class Bullet {
 
     isOffScreen() {
         return this.x < -20 || this.x > 420 || this.y < -20 || this.y > 620;
+    }
+}
+
+class HomingBullet extends Bullet {
+    constructor(x, y, game) {
+        super(x, y, -Math.PI / 2, 6, false); // начальный угол вверх
+        this.game = game;
+        this.color = '#ff44ff'; // фиолетовый
+        this.radius = 3;
+        this.damage = 0.4; // уменьшенный урон
+        this.turnSpeed = 0.08; // радиан/кадр
+    }
+
+    update() {
+        // Ищем ближайшего врага
+        const enemies = this.game.enemies;
+        let closestEnemy = null;
+        let closestDist = Infinity;
+        for (let enemy of enemies) {
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < closestDist) {
+                closestDist = dist;
+                closestEnemy = enemy;
+            }
+        }
+
+        if (closestEnemy) {
+            const desiredAngle = Math.atan2(closestEnemy.y - this.y, closestEnemy.x - this.x);
+            let angleDiff = desiredAngle - this.angle;
+            // Нормализуем угол в [-PI, PI]
+            while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+            while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+
+            // Поворачиваем в сторону желаемого угла
+            if (angleDiff > this.turnSpeed) {
+                this.angle += this.turnSpeed;
+            } else if (angleDiff < -this.turnSpeed) {
+                this.angle -= this.turnSpeed;
+            } else {
+                this.angle = desiredAngle;
+            }
+        }
+        // иначе летим в текущем направлении (вверх, если врагов нет)
+
+        super.update();
     }
 }
 
@@ -166,7 +205,6 @@ class Game {
         this.canvas.width = 400;
         this.canvas.height = 600;
 
-        // Определяем тип устройства
         this.isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         this.showCorrectControls();
 
@@ -181,17 +219,14 @@ class Game {
         this.waveTimer = 0;
         this.enemiesSpawned = 0;
 
-        // Управление
         this.laserMode = false;
         this.laserKeyDown = false;
         this.twoFingers = false;
-        
-        // Для мобильного тапа
+
         this.touchStartTime = 0;
         this.touchStartPos = null;
         this.touchStartFingers = 0;
 
-        // Обратный отсчёт
         this.countdown = 0;
         this.countdownTimer = 0;
         this.countdownText = '';
@@ -206,7 +241,6 @@ class Game {
     }
 
     setupEventListeners() {
-        // Мышь (десктоп)
         this.canvas.addEventListener('mousemove', (e) => {
             if (this.isMobile) return;
             const rect = this.canvas.getBoundingClientRect();
@@ -217,7 +251,6 @@ class Game {
             this.player.update(this.mouseX, this.mouseY);
         });
 
-        // Клавиши Z и X
         window.addEventListener('keydown', (e) => {
             if (e.code === 'KeyZ') {
                 this.laserKeyDown = true;
@@ -232,17 +265,13 @@ class Game {
             }
         });
 
-        // Мобильные касания
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (!this.gameRunning || this.gameOver) return;
-            
             const touches = e.touches;
             this.twoFingers = touches.length >= 2;
             this.touchStartFingers = touches.length;
-            
             if (touches.length === 1) {
-                // Запоминаем начало для тапа
                 this.touchStartTime = Date.now();
                 const rect = this.canvas.getBoundingClientRect();
                 const scaleX = this.canvas.width / rect.width;
@@ -269,8 +298,6 @@ class Game {
                 this.twoFingers = false;
                 return;
             }
-
-            // Проверка тапа для бомбы (только если изначально был 1 палец)
             if (this.touchStartFingers === 1 && this.touchStartPos) {
                 const dt = Date.now() - this.touchStartTime;
                 const dx = Math.abs(this.mouseX - this.touchStartPos.x);
@@ -279,8 +306,6 @@ class Game {
                     this.useBomb();
                 }
             }
-            
-            // Обновляем количество пальцев
             this.twoFingers = e.touches.length >= 2;
             if (e.touches.length > 0) {
                 this.updateMobilePosition(e.touches);
@@ -289,7 +314,6 @@ class Game {
             this.touchStartFingers = 0;
         });
 
-        // Кнопки
         document.getElementById('startButton').addEventListener('click', () => {
             this.startCountdown();
         });
@@ -306,7 +330,6 @@ class Game {
         const touch = touches[0];
         let tx = (touch.clientX - rect.left) * scaleX;
         let ty = (touch.clientY - rect.top) * scaleY;
-        // Смещение вверх, чтобы корабль был над пальцем
         ty = Math.max(20, ty - 80);
         this.player.update(tx, ty);
         this.mouseX = tx;
@@ -372,7 +395,6 @@ class Game {
     }
 
     update() {
-        // Обратный отсчёт
         if (this.countdown > 0) {
             this.countdownTimer--;
             if (this.countdownTimer <= 0) {
@@ -390,35 +412,28 @@ class Game {
 
         if (!this.gameRunning || this.gameOver) return;
 
-        // Режим лазеров
         this.laserMode = this.laserKeyDown || this.twoFingers;
 
         // Автострельба
         if (this.player.shootCooldown <= 0) {
             if (this.laserMode) {
-                // Два лазера под углом 20 градусов
-                const baseAngle = -Math.PI / 2;
-                const spread = 20 * Math.PI / 180;
-                this.bullets.push(new Bullet(this.player.x, this.player.y - 5, baseAngle - spread, 9, false));
-                this.bullets.push(new Bullet(this.player.x, this.player.y - 5, baseAngle + spread, 9, false));
-                this.player.shootCooldown = 10; // интервал
+                // Самонаводящаяся пуля
+                this.bullets.push(new HomingBullet(this.player.x, this.player.y - 5, this));
+                this.player.shootCooldown = 10; // немного реже
             } else {
-                // Обычный одиночный выстрел (реже)
+                // Обычная пуля
                 this.bullets.push(new Bullet(this.player.x, this.player.y - 15, -Math.PI / 2, 9, false));
-                this.player.shootCooldown = 8; // увеличено с 6 до 8
+                this.player.shootCooldown = 8;
             }
         }
 
-        // Обновление игрока (для десктопа уже сделано в mousemove, для мобильных в touch)
         if (!this.isMobile) {
             this.player.update(this.mouseX, this.mouseY);
         }
 
-        // Пули
         this.bullets.forEach(b => b.update());
         this.bullets = this.bullets.filter(b => !b.isOffScreen());
 
-        // Враги и спавн
         if (this.enemiesSpawned < this.wave * 5) {
             this.waveTimer++;
             if (this.waveTimer > 50) {
@@ -430,7 +445,6 @@ class Game {
         this.enemies.forEach(e => e.update());
         this.checkCollisions();
 
-        // Новая волна
         if (this.enemies.length === 0 && this.enemiesSpawned >= this.wave * 5) {
             this.wave++;
             this.enemiesSpawned = 0;
@@ -450,7 +464,7 @@ class Game {
                     const dy = bullet.y - enemy.y;
                     if (Math.sqrt(dx * dx + dy * dy) < 18) {
                         this.bullets.splice(i, 1);
-                        if (enemy.hit()) {
+                        if (enemy.hit(bullet.damage || 1)) {
                             this.player.score += enemy.points;
                             this.enemies.splice(j, 1);
                         }
@@ -460,7 +474,7 @@ class Game {
             }
         }
 
-        // Вражеские пули → игрок (хитбокс ~6px)
+        // Вражеские пули → игрок
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const bullet = this.bullets[i];
             if (bullet.isEnemy) {
@@ -497,7 +511,6 @@ class Game {
     }
 
     drawUI() {
-        // Сердечки
         for (let i = 0; i < 3; i++) {
             const x = 20 + i * 22;
             const y = 20;
@@ -515,7 +528,6 @@ class Game {
             this.ctx.restore();
         }
 
-        // Бомбы
         const bombY = 580;
         for (let i = 0; i < 3; i++) {
             const x = 160 + i * 40;
@@ -528,7 +540,6 @@ class Game {
             this.ctx.arc(x, bombY, 8, 0, Math.PI * 2);
             this.ctx.fill();
             this.ctx.stroke();
-            // Фитиль
             this.ctx.beginPath();
             this.ctx.moveTo(x, bombY - 8);
             this.ctx.lineTo(x + 4, bombY - 14);
@@ -546,7 +557,6 @@ class Game {
             this.ctx.restore();
         }
 
-        // Волна
         this.ctx.fillStyle = '#ffffff';
         this.ctx.font = '14px Arial';
         this.ctx.textAlign = 'right';
@@ -558,7 +568,6 @@ class Game {
         this.ctx.fillStyle = '#0a0a1a';
         this.ctx.fillRect(0, 0, 400, 600);
 
-        // Звёзды
         this.ctx.fillStyle = '#ffffff';
         for (let i = 0; i < 30; i++) {
             const sx = (i * 47 + 13) % 400;
@@ -571,7 +580,6 @@ class Game {
         this.player.draw(this.ctx);
         this.drawUI();
 
-        // Обратный отсчёт
         if (this.countdown > 0 && this.countdownText) {
             this.ctx.save();
             this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
