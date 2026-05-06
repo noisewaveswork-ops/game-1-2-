@@ -544,6 +544,17 @@ class Game {
                 if (bgm) bgm.pause();
             }
         });
+        // Проверка загрузки видео
+    const video = document.getElementById('bgVideo');
+        if (video) {
+        video.addEventListener('error', () => {
+            console.warn('Видео-фон не загрузился. Проверьте путь к файлу.');
+            video.style.display = 'none'; // скрыть сломанное видео
+            });
+            video.addEventListener('loadeddata', () => {
+                console.log('Видео-фон загружен');
+            });
+        }
     }
 
     updateMobilePosition(touches) {
