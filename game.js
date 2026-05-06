@@ -293,9 +293,15 @@ class Game {
         this.countdownTimer = 0;
         this.countdownText = '';
 
+        // ---- Для фиксированного шага времени ----
+        this.lastTime = 0;               // предыдущее время
+        this.accumulator = 0;            // накопленное время
+        this.fixedDelta = 1000 / 60;     // 16.67 мс = 60 fps
+
         this.defineWavePatterns();
         this.setupEventListeners();
-        this.gameLoop();
+        // Запускаем игровой цикл через requestAnimationFrame
+        requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
     }
 
     defineWavePatterns() {
@@ -762,10 +768,29 @@ class Game {
         }
     }
 
-    gameLoop() {
-        this.update();
+    gameLoop(timestamp) {
+        // Рассчитываем прошедшее время
+        if (this.lastTime === 0) this.lastTime = timestamp;
+        let delta = timestamp - this.lastTime;
+        this.lastTime = timestamp;
+
+        // Предотвращаем слишком большой delta (например, после паузы)
+        if (delta > 1000) delta = 1000;
+
+        // Накапливаем время
+        this.accumulator += delta;
+
+        // Выполняем фиксированные шаги обновления (60 раз в секунду)
+        while (this.accumulator >= this.fixedDelta) {
+            this.update(); // один шаг = 1/60 сек
+            this.accumulator -= this.fixedDelta;
+        }
+
+        // Отрисовываем каждый кадр (с той частотой, которая доступна)
         this.draw();
-        requestAnimationFrame(() => this.gameLoop());
+
+        // Запускаем следующий кадр
+        requestAnimationFrame((nextTimestamp) => this.gameLoop(nextTimestamp));
     }
 }
 
