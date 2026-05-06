@@ -21,8 +21,8 @@ class Player {
         if (keys.ArrowUp || keys.KeyW) this.y -= this.speed;
         if (keys.ArrowDown || keys.KeyS) this.y += this.speed;
 
-        // Ограничение движения
-        this.x = Math.max(this.width/2, Math.min(800 - this.width/2, this.x));
+        // Ограничение движения (ширина 400)
+        this.x = Math.max(this.width/2, Math.min(400 - this.width/2, this.x));
         this.y = Math.max(this.height/2, Math.min(600 - this.height/2, this.y));
 
         // Неуязвимость после попадания
@@ -115,7 +115,8 @@ class Bullet {
     }
 
     isOffScreen() {
-        return this.x < -20 || this.x > 820 || this.y < -20 || this.y > 620;
+        // Проверка для ширины 400
+        return this.x < -20 || this.x > 420 || this.y < -20 || this.y > 620;
     }
 }
 
@@ -169,10 +170,11 @@ class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
-        this.canvas.width = 800;
+        // Размеры теперь из HTML, но дублируем для удобства
+        this.canvas.width = 400;
         this.canvas.height = 600;
         
-        this.player = new Player(400, 500);
+        this.player = new Player(200, 500);  // было 400,500
         this.bullets = [];
         this.enemies = [];
         this.keys = {};
@@ -210,7 +212,7 @@ class Game {
     }
 
     startGame() {
-        this.player = new Player(400, 500);
+        this.player = new Player(200, 500);  // тоже сброс на центр X
         this.bullets = [];
         this.enemies = [];
         this.wave = 1;
@@ -239,7 +241,8 @@ class Game {
     }
 
     spawnEnemy() {
-        const x = Math.random() * 700 + 50;
+        // X от 50 до 350 (для ширины 400)
+        const x = Math.random() * 300 + 50;
         const y = -30;
         
         const patterns = [
@@ -393,15 +396,15 @@ class Game {
     }
 
     draw() {
-        // Очистка canvas
+        // Очистка canvas (400x600)
         this.ctx.fillStyle = '#0a0a1a';
-        this.ctx.fillRect(0, 0, 800, 600);
+        this.ctx.fillRect(0, 0, 400, 600);
 
         // Звездный фон
         this.ctx.fillStyle = '#ffffff';
         for (let i = 0; i < 50; i++) {
             this.ctx.fillRect(
-                Math.random() * 800,
+                Math.random() * 400,
                 Math.random() * 600,
                 2,
                 2
@@ -423,7 +426,7 @@ class Game {
         if (this.gameRunning) {
             this.ctx.fillStyle = '#ffffff';
             this.ctx.font = '20px Arial';
-            this.ctx.fillText(`Wave ${this.wave}`, 700, 30);
+            this.ctx.fillText(`Wave ${this.wave}`, 300, 30);  // было 700
         }
     }
 
