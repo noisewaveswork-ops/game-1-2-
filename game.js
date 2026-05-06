@@ -211,8 +211,8 @@ class Game {
         this.gameRunning = false;
         this.gameOver = false;
         this.wave = 1;
-        this.waveStep = 0;               // шаг внутри волны
-        this.waveSpawnQueue = [];        // очередь врагов текущей волны
+        this.waveStep = 0;
+        this.waveSpawnQueue = [];
         this.spawnTimer = 0;
 
         this.laserMode = false;
@@ -227,30 +227,24 @@ class Game {
         this.countdownTimer = 0;
         this.countdownText = '';
 
-        this.defineWavePatterns();       // заполняем библиотеку волн
+        this.defineWavePatterns();
         this.setupEventListeners();
         this.gameLoop();
     }
 
-    // ----- Библиотека паттернов врагов -----
-    // Каждый паттерн — объект с health, points и методом update(enemy)
-    // (метод update использует this.game для доступа к game.bullets и game.player)
-
     defineWavePatterns() {
-        // Простейший: летит вниз, иногда стреляет одиночной прицельной пулей
         this.patterns = {
             straightShooter: {
                 health: 3,
                 points: 100,
                 update: function(enemy) {
                     enemy.y += 2;
-                    if (enemy.timer % 60 === 0) { // раз в секунду
+                    if (enemy.timer % 60 === 0) {
                         const angle = Math.atan2(game.player.y - enemy.y, game.player.x - enemy.x);
                         game.bullets.push(new Bullet(enemy.x, enemy.y, angle, 3, true));
                     }
                 }
             },
-            // Синусоида + веер из трёх пуль
             sineFan: {
                 health: 4,
                 points: 150,
@@ -265,7 +259,6 @@ class Game {
                     }
                 }
             },
-            // Круговая спираль (медленная, 6 лучей)
             spiral: {
                 health: 6,
                 points: 200,
@@ -279,12 +272,10 @@ class Game {
                     }
                 }
             },
-            // Заход сбоку, стрельба прицельными очередями
             sideSweeper: {
                 health: 5,
                 points: 180,
                 update: function(enemy) {
-                    // движение по горизонтали: если зашёл слева — летит вправо-вниз
                     if (!enemy.initialized) {
                         enemy.initialized = true;
                         enemy.xSpeed = (enemy.x < 200) ? 1.5 : -1.5;
@@ -293,7 +284,6 @@ class Game {
                     enemy.y += 1.5;
                     if (enemy.timer % 45 === 0) {
                         const angle = Math.atan2(game.player.y - enemy.y, game.player.x - enemy.x);
-                        // три быстрых выстрела подряд (очередь)
                         for (let j = 0; j < 3; j++) {
                             setTimeout(() => {
                                 if (enemy.health > 0) {
@@ -304,7 +294,6 @@ class Game {
                     }
                 }
             },
-            // Мини-босс: большой, медленный, стреляет сложным паттерном
             miniboss: {
                 health: 20,
                 points: 500,
@@ -312,14 +301,12 @@ class Game {
                     enemy.y += 0.8;
                     enemy.x += Math.sin(enemy.timer * 0.02) * 2;
                     if (enemy.timer % 30 === 0) {
-                        // двойная спираль
                         for (let i = 0; i < 12; i++) {
                             const angle = (Math.PI * 2 / 12) * i + enemy.timer * 0.1;
                             game.bullets.push(new Bullet(enemy.x, enemy.y, angle, 2.2, true));
                         }
                     }
                     if (enemy.timer % 90 === 0) {
-                        // прицельный залп из 5 пуль
                         const base = Math.atan2(game.player.y - enemy.y, game.player.x - enemy.x);
                         for (let i = -2; i <= 2; i++) {
                             game.bullets.push(new Bullet(enemy.x, enemy.y, base + i * 0.2, 3, true));
@@ -330,45 +317,36 @@ class Game {
         };
     }
 
-    // ----- Построение волн -----
     buildWave(waveNumber) {
         const queue = [];
-        // Добавляем врагов в зависимости от номера волны
-        // Ранние волны: простые стрелки и синусоиды
         if (waveNumber <= 2) {
             for (let i = 0; i < 4; i++) {
                 queue.push({ type: 'straightShooter', x: 80 + i * 80, y: -30, delay: i * 30 });
             }
         } else if (waveNumber <= 4) {
-            // микс прямых и синусоид
             for (let i = 0; i < 3; i++) {
                 queue.push({ type: 'straightShooter', x: 60 + i * 120, y: -30, delay: i * 25 });
             }
             queue.push({ type: 'sineFan', x: 200, y: -50, delay: 60 });
             queue.push({ type: 'sineFan', x: 100, y: -70, delay: 90 });
         } else if (waveNumber <= 6) {
-            // добавляем спиральщиков
             for (let i = 0; i < 2; i++) {
                 queue.push({ type: 'straightShooter', x: 150 + i * 100, y: -30, delay: i * 30 });
             }
             queue.push({ type: 'spiral', x: 200, y: -40, delay: 50 });
             queue.push({ type: 'sineFan', x: 300, y: -60, delay: 80 });
         } else if (waveNumber <= 8) {
-            // заходы сбоку
             queue.push({ type: 'sideSweeper', x: -20, y: 100, delay: 20 });
             queue.push({ type: 'sideSweeper', x: 420, y: 150, delay: 50 });
             queue.push({ type: 'spiral', x: 200, y: -40, delay: 80 });
         } else if (waveNumber === 9) {
-            // предбоссовая волна: много сильных врагов
             for (let i = 0; i < 2; i++) {
                 queue.push({ type: 'spiral', x: 120 + i * 160, y: -40, delay: i * 40 });
             }
             queue.push({ type: 'sideSweeper', x: -20, y: 200, delay: 60 });
         } else if (waveNumber === 10) {
-            // Босс волны 10
             queue.push({ type: 'miniboss', x: 200, y: -50, delay: 30 });
         } else {
-            // После 10 волны всё сложнее: случайные наборы из всех типов + повтор боссов каждые 5 волн
             const types = ['straightShooter', 'sineFan', 'spiral', 'sideSweeper'];
             const count = 3 + Math.floor(waveNumber / 2);
             for (let i = 0; i < count; i++) {
@@ -387,20 +365,17 @@ class Game {
         this.waveStep = 0;
         this.waveSpawnQueue = this.buildWave(this.wave);
         this.spawnTimer = 0;
-        // Бонус за завершение предыдущей волны
         this.player.score += 500 * (this.wave - 1);
     }
 
     spawnFromQueue() {
         if (this.waveSpawnQueue.length === 0) {
-            // Если врагов на экране не осталось, начинаем новую волну
             if (this.enemies.length === 0) {
                 this.nextWave();
             }
             return;
         }
 
-        // Спавним врагов согласно задержкам
         while (this.waveSpawnQueue.length > 0 && this.spawnTimer >= this.waveSpawnQueue[0].delay) {
             const spec = this.waveSpawnQueue.shift();
             const pattern = this.patterns[spec.type];
@@ -410,8 +385,6 @@ class Game {
         }
         this.spawnTimer++;
     }
-
-    // ------------------------------------------------------------
 
     showCorrectControls() {
         document.getElementById('desktopControls').classList.toggle('hidden', this.isMobile);
@@ -520,7 +493,7 @@ class Game {
         this.player = new Player(200, 500);
         this.bullets = [];
         this.enemies = [];
-        this.wave = 0;               // будет увеличено до 1 в nextWave
+        this.wave = 0;
         this.nextWave();
         this.laserMode = false;
         this.laserKeyDown = false;
@@ -582,10 +555,11 @@ class Game {
         this.bullets = this.bullets.filter(b => !b.isOffScreen());
 
         this.enemies.forEach(e => e.update());
+        // Удаляем врагов, ушедших за нижнюю границу экрана
+        this.enemies = this.enemies.filter(e => e.y < 620 + 20); // 620 = высота канваса, +20 для надёжности
         this.spawnFromQueue();
         this.checkCollisions();
 
-        // Переход к следующей волне, если все враги уничтожены и очередь пуста
         if (this.enemies.length === 0 && this.waveSpawnQueue.length === 0) {
             this.nextWave();
         }
