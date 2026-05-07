@@ -115,7 +115,6 @@ class Player {
                 const h = this.height;
                 ctx.drawImage(this.image, this.x - w/2, this.y - h/2 + 30, w, h);
             } else {
-                // Запасной спрайт
                 ctx.fillStyle = '#00ffcc';
                 ctx.shadowBlur = 12;
                 ctx.shadowColor = '#00ffcc';
@@ -133,7 +132,7 @@ class Player {
             }
         }
 
-        // Хитбокс (точка) - увеличенный и более заметный
+        // Хитбокс (точка)
         ctx.fillStyle = '#ffffff';
         ctx.shadowBlur = 12;
         ctx.shadowColor = '#ff0000';
@@ -294,7 +293,6 @@ class Boss {
     update() {
         this.timer++;
         
-        // Вход босса
         if (!this.entered) {
             this.y += (this.targetY - this.y) * 0.05;
             if (Math.abs(this.y - this.targetY) < 1) {
@@ -306,7 +304,6 @@ class Boss {
             return;
         }
 
-        // Определение фазы по здоровью
         const healthPercent = this.health / this.maxHealth;
         if (healthPercent > 0.6) {
             this.phase = 1;
@@ -324,12 +321,10 @@ class Boss {
             }
         }
 
-        // Движение и атаки по фазам
         this.x += Math.sin(this.timer * 0.02) * 2;
 
         switch(this.phase) {
             case 1:
-                // Фаза 1: веерные атаки
                 if (this.timer % 50 === 0) {
                     const baseAngle = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
                     for (let i = -2; i <= 2; i++) {
@@ -346,7 +341,6 @@ class Boss {
                 }
                 break;
             case 2:
-                // Фаза 2: спирали + прицельные
                 if (this.timer % 40 === 0) {
                     for (let i = 0; i < 12; i++) {
                         const angle = (Math.PI * 2 / 12) * i + this.timer * 0.04;
@@ -369,7 +363,6 @@ class Boss {
                 }
                 break;
             case 3:
-                // Фаза 3: безумные атаки
                 if (this.timer % 30 === 0) {
                     for (let i = 0; i < 16; i++) {
                         const angle = (Math.PI * 2 / 16) * i + this.timer * 0.06;
@@ -398,7 +391,6 @@ class Boss {
     draw(ctx) {
         ctx.save();
         
-        // Основное тело босса
         const gradient = ctx.createRadialGradient(this.x, this.y, 10, this.x, this.y, 35);
         gradient.addColorStop(0, '#ff0000');
         gradient.addColorStop(0.5, '#ff3366');
@@ -411,7 +403,6 @@ class Boss {
         ctx.arc(this.x, this.y, 35, 0, Math.PI * 2);
         ctx.fill();
         
-        // Глаза
         ctx.fillStyle = '#ffffff';
         ctx.shadowBlur = 10;
         ctx.shadowColor = '#ffffff';
@@ -427,7 +418,6 @@ class Boss {
         ctx.arc(this.x + 15, this.y - 8, 4, 0, Math.PI * 2);
         ctx.fill();
         
-        // Нижние выступы (щупальца)
         ctx.strokeStyle = '#ff0000';
         ctx.lineWidth = 4;
         ctx.shadowBlur = 15;
@@ -444,7 +434,6 @@ class Boss {
             ctx.stroke();
         }
         
-        // Полоска здоровья
         const barWidth = 300;
         const barHeight = 8;
         ctx.fillStyle = '#333333';
@@ -463,9 +452,8 @@ class Boss {
         ctx.lineWidth = 2;
         ctx.strokeRect(50, 10, barWidth, barHeight);
         
-        // Текст фазы
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 12px Arial';
+        ctx.font = 'bold 12px "Unbounded", Arial';
         ctx.textAlign = 'left';
         ctx.fillText(`Фаза ${this.phase}`, 50, 40);
         ctx.textAlign = 'start';
@@ -530,7 +518,7 @@ class Game {
         this.waveStep = 0;
         this.waveSpawnQueue = [];
         this.spawnTimer = 0;
-        this.gameTimer = 0; // Таймер игры
+        this.gameTimer = 0;
         this.bossSpawned = false;
 
         this.laserMode = false;
@@ -549,10 +537,6 @@ class Game {
         this.lastTime = 0;
         this.accumulator = 0;
         this.fixedDelta = 1000 / 60;
-
-        // Музыка
-        this.bgmElement = document.getElementById('bgMusic');
-        this.musicInitialized = false;
 
         this.defineWavePatterns();
         this.setupEventListeners();
@@ -647,7 +631,6 @@ class Game {
     spawnBoss() {
         this.boss = new Boss(200, -50, this);
         this.bossSpawned = true;
-        // Очищаем оставшихся врагов
         this.enemies = [];
         this.waveSpawnQueue = [];
     }
@@ -672,123 +655,94 @@ class Game {
         document.getElementById('mobileControls').classList.toggle('hidden', !this.isMobile);
     }
 
-    // Метод для инициализации музыки
-    initMusic() {
-        if (this.musicInitialized) return;
-        
-        if (this.bgmElement) {
-            // Пытаемся воспроизвести музыку
-            const playPromise = this.bgmElement.play();
-            
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    console.log('Музыка запущена успешно');
-                    this.musicInitialized = true;
-                }).catch(error => {
-                    console.warn('Не удалось запустить музыку:', error);
-                    // Пробуем еще раз с небольшой задержкой
-                    setTimeout(() => {
-                        this.bgmElement.play().catch(e => 
-                            console.warn('Повторная попытка запуска музыки не удалась:', e)
-                        );
-                    }, 1000);
-                });
-            }
-        }
-    }
-
     setupEventListeners() {
-    this.canvas.addEventListener('mousemove', (e) => {
-        if (this.isMobile) return;
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        this.mouseX = (e.clientX - rect.left) * scaleX;
-        this.mouseY = (e.clientY - rect.top) * scaleY;
-        this.player.update(this.mouseX, this.mouseY);
-    });
-
-    window.addEventListener('keydown', (e) => {
-        if (e.code === 'KeyZ') this.laserKeyDown = true;
-        if (e.code === 'KeyX') this.useBomb();
-    });
-    window.addEventListener('keyup', (e) => {
-        if (e.code === 'KeyZ') this.laserKeyDown = false;
-    });
-
-    this.canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (!this.gameRunning || this.gameOver || this.gameComplete) return;
-        const touches = e.touches;
-        this.twoFingers = touches.length >= 2;
-        this.touchStartFingers = touches.length;
-        if (touches.length === 1) {
-            this.touchStartTime = Date.now();
+        this.canvas.addEventListener('mousemove', (e) => {
+            if (this.isMobile) return;
             const rect = this.canvas.getBoundingClientRect();
             const scaleX = this.canvas.width / rect.width;
             const scaleY = this.canvas.height / rect.height;
-            const touch = touches[0];
-            this.touchStartPos = {
-                x: (touch.clientX - rect.left) * scaleX,
-                y: (touch.clientY - rect.top) * scaleY
-            };
-        }
-        this.updateMobilePosition(touches);
-    }, { passive: false });
+            this.mouseX = (e.clientX - rect.left) * scaleX;
+            this.mouseY = (e.clientY - rect.top) * scaleY;
+            this.player.update(this.mouseX, this.mouseY);
+        });
 
-    this.canvas.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        if (!this.gameRunning || this.gameOver || this.gameComplete) return;
-        this.twoFingers = e.touches.length >= 2;
-        this.updateMobilePosition(e.touches);
-    }, { passive: false });
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyZ') this.laserKeyDown = true;
+            if (e.code === 'KeyX') this.useBomb();
+        });
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyZ') this.laserKeyDown = false;
+        });
 
-    this.canvas.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        if (!this.gameRunning || this.gameOver || this.gameComplete) {
-            this.twoFingers = false;
-            return;
-        }
-        if (this.touchStartFingers === 1 && this.touchStartPos) {
-            const dt = Date.now() - this.touchStartTime;
-            const dx = Math.abs(this.mouseX - this.touchStartPos.x);
-            const dy = Math.abs(this.mouseY - this.touchStartPos.y);
-            if (dt < 300 && dx < 20 && dy < 20) this.useBomb();
-        }
-        this.twoFingers = e.touches.length >= 2;
-        if (e.touches.length > 0) this.updateMobilePosition(e.touches);
-        this.touchStartPos = null;
-        this.touchStartFingers = 0;
-    });
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!this.gameRunning || this.gameOver || this.gameComplete) return;
+            const touches = e.touches;
+            this.twoFingers = touches.length >= 2;
+            this.touchStartFingers = touches.length;
+            if (touches.length === 1) {
+                this.touchStartTime = Date.now();
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                const touch = touches[0];
+                this.touchStartPos = {
+                    x: (touch.clientX - rect.left) * scaleX,
+                    y: (touch.clientY - rect.top) * scaleY
+                };
+            }
+            this.updateMobilePosition(touches);
+        }, { passive: false });
 
-    document.getElementById('startButton').addEventListener('click', () => {
-        this.sound.init();
-        const bgm = document.getElementById('bgMusic');
-        if (bgm) {
-            bgm.pause();
-            bgm.currentTime = 0;
-            bgm.volume = 0.7;
-            setTimeout(() => {
-                bgm.play()
-                    .then(() => console.log('Музыка запущена'))
-                    .catch(e => console.error('Ошибка музыки:', e));
-            }, 50);
-        }
-        this.startCountdown();
-    });
+        this.canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!this.gameRunning || this.gameOver || this.gameComplete) return;
+            this.twoFingers = e.touches.length >= 2;
+            this.updateMobilePosition(e.touches);
+        }, { passive: false });
 
-    document.getElementById('restartButton').addEventListener('click', () => {
-        const bgm = document.getElementById('bgMusic');
-        if (bgm && bgm.paused) {
-            setTimeout(() => {
-                bgm.play()
-                    .then(() => console.log('Музыка перезапущена'))
-                    .catch(e => console.error('Ошибка музыки:', e));
-            }, 50);
-        }
-        this.startCountdown();
-    });
-}
+        this.canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (!this.gameRunning || this.gameOver || this.gameComplete) {
+                this.twoFingers = false;
+                return;
+            }
+            if (this.touchStartFingers === 1 && this.touchStartPos) {
+                const dt = Date.now() - this.touchStartTime;
+                const dx = Math.abs(this.mouseX - this.touchStartPos.x);
+                const dy = Math.abs(this.mouseY - this.touchStartPos.y);
+                if (dt < 300 && dx < 20 && dy < 20) this.useBomb();
+            }
+            this.twoFingers = e.touches.length >= 2;
+            if (e.touches.length > 0) this.updateMobilePosition(e.touches);
+            this.touchStartPos = null;
+            this.touchStartFingers = 0;
+        });
+
+        document.getElementById('startButton').addEventListener('click', () => {
+            this.sound.init();
+            const bgm = document.getElementById('bgMusic');
+            if (bgm) {
+                bgm.pause();
+                bgm.currentTime = 0;
+                bgm.volume = 0.7;
+                setTimeout(() => {
+                    bgm.play().catch(e => console.error('Ошибка музыки:', e));
+                }, 50);
+            }
+            this.startCountdown();
+        });
+
+        document.getElementById('restartButton').addEventListener('click', () => {
+            const bgm = document.getElementById('bgMusic');
+            if (bgm && bgm.paused) {
+                setTimeout(() => {
+                    bgm.play().catch(e => console.error('Ошибка музыки:', e));
+                }, 50);
+            }
+            this.startCountdown();
+        });
+    }
 
     updateMobilePosition(touches) {
         if (touches.length === 0) return;
@@ -831,7 +785,6 @@ class Game {
         if (this.player.useBomb()) {
             this.bullets = this.bullets.filter(b => !b.isEnemy);
             if (this.boss) {
-                // Бомба наносит урон боссу
                 if (this.boss.hit(10)) {
                     this.player.score += this.boss.points;
                     this.boss = null;
@@ -855,7 +808,6 @@ class Game {
         document.querySelector('#gameOver h2').textContent = 'Поздравляем!';
         this.sound.waveStart();
         
-        // Останавливаем музыку при победе
         if (this.bgmElement) {
             this.bgmElement.pause();
         }
@@ -879,19 +831,17 @@ class Game {
 
         if (!this.gameRunning || this.gameOver || this.gameComplete) return;
 
-        // Сдвиг фона
         this.bgY = (this.bgY + this.bgSpeed) % this.canvas.height;
 
-        // Таймер игры
         this.gameTimer++;
         
-        // Спавн босса через ~60 секунд (3600 кадров при 60 FPS)
         if (!this.bossSpawned && this.gameTimer > 3600) {
             this.spawnBoss();
         }
 
         this.laserMode = this.laserKeyDown || this.twoFingers;
 
+        // --- фиксированная скорострельность для всех устройств ---
         if (this.player.shootCooldown <= 0) {
             if (this.laserMode) {
                 this.bullets.push(new HomingBullet(this.player.x, this.player.y - 5, this));
@@ -905,7 +855,6 @@ class Game {
 
         if (!this.isMobile) this.player.update(this.mouseX, this.mouseY);
 
-        // Обновление босса
         if (this.boss) {
             this.boss.update();
             if (this.boss.health <= 0) {
@@ -936,7 +885,6 @@ class Game {
         for (let i = this.bullets.length - 1; i >= 0; i--) {
             const bullet = this.bullets[i];
             if (!bullet.isEnemy) {
-                // Проверка столкновения с боссом
                 if (this.boss) {
                     const dx = bullet.x - this.boss.x;
                     const dy = bullet.y - this.boss.y;
@@ -952,7 +900,6 @@ class Game {
                     }
                 }
                 
-                // Проверка столкновения с врагами
                 for (let j = this.enemies.length - 1; j >= 0; j--) {
                     const enemy = this.enemies[j];
                     const dx = bullet.x - enemy.x;
@@ -982,7 +929,6 @@ class Game {
             }
         }
 
-        // Столкновение с врагами
         for (let i = this.enemies.length - 1; i >= 0; i--) {
             const enemy = this.enemies[i];
             const dx = enemy.x - this.player.x;
@@ -993,7 +939,6 @@ class Game {
             }
         }
         
-        // Столкновение с боссом
         if (this.boss) {
             const dx = this.boss.x - this.player.x;
             const dy = this.boss.y - this.player.y;
@@ -1011,102 +956,119 @@ class Game {
         document.querySelector('#gameOver h2').textContent = 'Игра окончена!';
         this.sound.playerDeath();
         
-        // Останавливаем музыку при смерти
         if (this.bgmElement) {
             this.bgmElement.pause();
         }
     }
 
+    // --------------------------------------------------------
+    //  UI  –  все координаты можно менять здесь
+    // --------------------------------------------------------
     drawUI() {
-        const iconSize = 20;
-        
-        // Статичная плашка ui.png
+        // ----- настройки расположения (меняйте цифры под свой ui.png) -----
+        const UI = {
+            // плашка ui.png (растягивается на всю ширину)
+            panelY: 0,                    // отступ от верха
+            panelHeight: 50,             // высота плашки (ширина = 400)
+
+            // жизни (рисуются внутри плашки слева)
+            lives: {
+                x: 16,                   // левый отступ
+                y: 18,                   // отступ от верха плашки
+                gap: 8,                  // расстояние между иконками
+                size: 20                 // размер иконки
+            },
+
+            // очки (правый верх)
+            score: {
+                x: 384,                  // правый край (400-16)
+                y: 20,                   // отступ от верха плашки
+                size: 14,                // размер шрифта
+                color: '#ffffff'
+            },
+
+            // счётчик волн (правее, чуть ниже очков)
+            wave: {
+                x: 384,                  // правый край
+                y: 38,                   // отступ от верха плашки
+                size: 12,                // размер шрифта
+                color: '#cccccc'
+            },
+
+            // бомбы (низ по центру)
+            bombs: {
+                startX: 164,             // X первой бомбы
+                y: 568,                  // Y всех бомб
+                gap: 12,                 // расстояние между иконками
+                size: 20                 // размер иконки
+            }
+        };
+
+        const ctx = this.ctx;
+        ctx.save();
+
+        // --- плашка ---
         if (this.uiPanel && this.uiPanel.complete && this.uiPanel.naturalWidth > 0) {
-            const panelWidth = 300;
-            const panelHeight = 30;
-            const panelX = (this.canvas.width - panelWidth) / 2; // По центру
-            const panelY = 15; // Отступ 15px сверху
-            this.ctx.drawImage(this.uiPanel, panelX, panelY, panelWidth, panelHeight);
+            ctx.drawImage(this.uiPanel, 0, UI.panelY, 400, UI.panelHeight);
         } else {
-            // Запасной вариант для плашки
-            this.ctx.fillStyle = 'rgba(0, 20, 40, 0.8)';
-            this.ctx.fillRect(50, 15, 300, 30);
-            this.ctx.strokeStyle = '#00ffcc';
-            this.ctx.strokeRect(50, 15, 300, 30);
+            ctx.fillStyle = 'rgba(0, 20, 40, 0.8)';
+            ctx.fillRect(0, UI.panelY, 400, UI.panelHeight);
+            ctx.strokeStyle = '#00ffcc';
+            ctx.strokeRect(0, UI.panelY, 400, UI.panelHeight);
         }
 
-        // Жизни (выровнены по левому краю ui.png, после отступа)
-        const livesStartX = (this.canvas.width - 300) / 2 + 10; // Левый край панели + отступ
-        const livesY = 60; // 15 + 30 + 15 = 60px от верха
-        
+        // --- жизни ---
+        const lv = UI.lives;
         for (let i = 0; i < 2; i++) {
-            const x = livesStartX + i * (iconSize + 12); // Расстояние 12px между иконками
+            const x = lv.x + i * (lv.size + lv.gap);
+            const y = UI.panelY + lv.y;
             const img = i < this.player.lives ? this.heartFull : this.heartEmpty;
             if (img && img.complete && img.naturalWidth > 0) {
-                this.ctx.drawImage(img, x, livesY, iconSize, iconSize);
+                ctx.drawImage(img, x, y, lv.size, lv.size);
             } else {
-                // Запасной вариант для сердечек
-                this.ctx.save();
-                this.ctx.fillStyle = i < this.player.lives ? '#ff3366' : '#444';
-                this.ctx.shadowBlur = i < this.player.lives ? 8 : 0;
-                this.ctx.shadowColor = '#ff3366';
-                this.ctx.beginPath();
-                this.ctx.arc(x + 8, livesY + 8, 4, Math.PI, 0, false);
-                this.ctx.arc(x + 16, livesY + 8, 4, Math.PI, 0, false);
-                this.ctx.moveTo(x + 4, livesY + 10);
-                this.ctx.lineTo(x + 12, livesY + 18);
-                this.ctx.lineTo(x + 20, livesY + 10);
-                this.ctx.fill();
-                this.ctx.restore();
+                // запасной вариант
+                ctx.fillStyle = i < this.player.lives ? '#ff3366' : '#444';
+                ctx.beginPath();
+                ctx.arc(x + 10, y + 10, 8, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
 
-        // Бомбы (низ по центру)
+        // --- очки (Unbounded) ---
+        ctx.font = `${UI.score.size}px "Unbounded", "Unbounded Medium", Arial`;
+        ctx.fillStyle = UI.score.color;
+        ctx.textAlign = 'right';
+        ctx.fillText(`${this.player.score}`, UI.score.x, UI.panelY + UI.score.y);
+
+        // --- волна ---
+        ctx.font = `${UI.wave.size}px "Unbounded", "Unbounded Medium", Arial`;
+        ctx.fillStyle = UI.wave.color;
+        ctx.fillText(`Волна ${this.wave}`, UI.wave.x, UI.panelY + UI.wave.y);
+        ctx.textAlign = 'left';
+
+        // --- бомбы ---
+        const bv = UI.bombs;
         for (let i = 0; i < 3; i++) {
-            const x = 164 + i * (iconSize + 12);
-            const y = 568;
+            const x = bv.startX + i * (bv.size + bv.gap);
+            const y = bv.y;
             const img = i < this.player.bombs ? this.bombFull : this.bombEmpty;
             if (img && img.complete && img.naturalWidth > 0) {
-                this.ctx.drawImage(img, x, y, iconSize, iconSize);
+                ctx.drawImage(img, x, y, bv.size, bv.size);
             } else {
-                // Запасной вариант для бомб
-                this.ctx.save();
-                this.ctx.fillStyle = '#222';
-                this.ctx.strokeStyle = i < this.player.bombs ? '#ffaa00' : '#555';
-                this.ctx.shadowBlur = i < this.player.bombs ? 8 : 0;
-                this.ctx.shadowColor = '#ffaa00';
-                this.ctx.beginPath();
-                this.ctx.arc(x + 8, y + 8, 8, 0, Math.PI * 2);
-                this.ctx.fill();
-                this.ctx.stroke();
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + 8, y);
-                this.ctx.lineTo(x + 12, y - 6);
-                this.ctx.strokeStyle = '#ffaa00';
-                this.ctx.lineWidth = 2;
-                this.ctx.stroke();
-                if (i < this.player.bombs) {
-                    this.ctx.fillStyle = '#ff4400';
-                    this.ctx.shadowBlur = 6;
-                    this.ctx.shadowColor = '#ff4400';
-                    this.ctx.beginPath();
-                    this.ctx.arc(x + 12, y - 8, 3, 0, 2 * Math.PI);
-                    this.ctx.fill();
-                }
-                this.ctx.restore();
+                // запасной вариант
+                ctx.fillStyle = i < this.player.bombs ? '#ffaa00' : '#555';
+                ctx.beginPath();
+                ctx.arc(x + 10, y + 10, 8, 0, 2 * Math.PI);
+                ctx.fill();
             }
         }
 
-        // Счёт и волна
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = '14px Arial';
-        this.ctx.textAlign = 'right';
-        this.ctx.fillText(`${this.player.score}`, 380, 76);
-        this.ctx.textAlign = 'left';
+        ctx.restore();
     }
 
+    // --------------------------------------------------------
+
     draw() {
-        // Скроллящийся фон
         if (this.bgImage.complete && this.bgImage.naturalWidth > 0) {
             const h = this.canvas.height;
             this.ctx.drawImage(this.bgImage, 0, this.bgY, this.canvas.width, h);
@@ -1116,19 +1078,17 @@ class Game {
             this.ctx.fillRect(0, 0, 400, 600);
         }
 
-        // Игровые объекты
         if (this.boss) this.boss.draw(this.ctx);
         this.enemies.forEach(e => e.draw(this.ctx));
         this.bullets.forEach(b => b.draw(this.ctx));
         this.player.draw(this.ctx);
         this.drawUI();
 
-        // Обратный отсчёт
         if (this.countdown > 0 && this.countdownText) {
             this.ctx.save();
             this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
             this.ctx.fillRect(0, 0, 400, 600);
-            this.ctx.font = 'bold 120px Arial';
+            this.ctx.font = 'bold 120px "Unbounded", Arial';
             this.ctx.fillStyle = '#ffffff';
             this.ctx.textAlign = 'center';
             this.ctx.shadowBlur = 20;
