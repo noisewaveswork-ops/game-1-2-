@@ -71,7 +71,7 @@ class Player {
     constructor(x, y, image) {
         this.x = x;
         this.y = y;
-        this.image = image;                // изображение игрока
+        this.image = image;
         this.width = image ? image.width : 16;
         this.height = image ? image.height : 16;
         this.lives = 3;
@@ -85,7 +85,6 @@ class Player {
     update(targetX, targetY) {
         this.x = targetX;
         this.y = targetY;
-        // Ограничиваем по границам, учитывая реальные размеры спрайта
         const halfW = this.width / 2;
         const halfH = this.height / 2;
         this.x = Math.max(halfW, Math.min(400 - halfW, this.x));
@@ -100,15 +99,13 @@ class Player {
 
     draw(ctx) {
         ctx.save();
-        // Мигание при неуязвимости
         if (!this.invulnerable || Math.floor(Date.now() / 100) % 2) {
             if (this.image && this.image.complete && this.image.naturalWidth > 0) {
-                // Рисуем изображение по центру
                 const w = this.width;
                 const h = this.height;
                 ctx.drawImage(this.image, this.x - w/2, this.y - h/2 + 30, w, h);
             } else {
-                // Запасной спрайт, если изображение ещё не загружено
+                // Запасной спрайт
                 ctx.fillStyle = '#00ffcc';
                 ctx.shadowBlur = 12;
                 ctx.shadowColor = '#00ffcc';
@@ -126,7 +123,7 @@ class Player {
             }
         }
 
-        // Хитбокс (точка) — всегда видна
+        // Хитбокс (точка)
         ctx.fillStyle = '#ffffff';
         ctx.shadowBlur = 8;
         ctx.shadowColor = '#ff0000';
@@ -291,7 +288,13 @@ class Game {
 
         // Изображение игрока
         this.playerImage = new Image();
-        this.playerImage.src = 'assets/player.png';   // ← ваш спрайт
+        this.playerImage.src = 'assets/player.png';
+
+        // Изображения сердечек
+        this.heartFull = new Image();
+        this.heartFull.src = 'assets/heart_full.png';
+        this.heartEmpty = new Image();
+        this.heartEmpty.src = 'assets/heart_empty.png';
 
         this.player = new Player(200, 500, this.playerImage);
         this.bullets = [];
@@ -694,22 +697,18 @@ class Game {
     }
 
     drawUI() {
+        // Отрисовка сердечек (3 слота)
+        const heartSize = 20; // размер иконки (можно менять)
         for (let i = 0; i < 3; i++) {
-            const x = 20 + i * 22, y = 20;
-            this.ctx.save();
-            this.ctx.fillStyle = i < this.player.lives ? '#ff3366' : '#444';
-            this.ctx.shadowBlur = i < this.player.lives ? 8 : 0;
-            this.ctx.shadowColor = '#ff3366';
-            this.ctx.beginPath();
-            this.ctx.arc(x - 5, y - 4, 4, Math.PI, 0, false);
-            this.ctx.arc(x + 5, y - 4, 4, Math.PI, 0, false);
-            this.ctx.moveTo(x - 9, y - 2);
-            this.ctx.lineTo(x, y + 8);
-            this.ctx.lineTo(x + 9, y - 2);
-            this.ctx.fill();
-            this.ctx.restore();
+            const x = 20 + i * 24; // отступ между сердечками
+            const y = 20;
+            const img = i < this.player.lives ? this.heartFull : this.heartEmpty;
+            if (img && img.complete && img.naturalWidth > 0) {
+                this.ctx.drawImage(img, x, y, heartSize, heartSize);
+            }
         }
 
+        // Бомбы
         const bombY = 580;
         for (let i = 0; i < 3; i++) {
             const x = 160 + i * 40;
@@ -739,6 +738,7 @@ class Game {
             this.ctx.restore();
         }
 
+        // Волна
         this.ctx.fillStyle = '#ffffff';
         this.ctx.font = '14px Arial';
         this.ctx.textAlign = 'right';
