@@ -698,80 +698,97 @@ class Game {
     }
 
     setupEventListeners() {
-        this.canvas.addEventListener('mousemove', (e) => {
-            if (this.isMobile) return;
+    this.canvas.addEventListener('mousemove', (e) => {
+        if (this.isMobile) return;
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        this.mouseX = (e.clientX - rect.left) * scaleX;
+        this.mouseY = (e.clientY - rect.top) * scaleY;
+        this.player.update(this.mouseX, this.mouseY);
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'KeyZ') this.laserKeyDown = true;
+        if (e.code === 'KeyX') this.useBomb();
+    });
+    window.addEventListener('keyup', (e) => {
+        if (e.code === 'KeyZ') this.laserKeyDown = false;
+    });
+
+    this.canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (!this.gameRunning || this.gameOver || this.gameComplete) return;
+        const touches = e.touches;
+        this.twoFingers = touches.length >= 2;
+        this.touchStartFingers = touches.length;
+        if (touches.length === 1) {
+            this.touchStartTime = Date.now();
             const rect = this.canvas.getBoundingClientRect();
             const scaleX = this.canvas.width / rect.width;
             const scaleY = this.canvas.height / rect.height;
-            this.mouseX = (e.clientX - rect.left) * scaleX;
-            this.mouseY = (e.clientY - rect.top) * scaleY;
-            this.player.update(this.mouseX, this.mouseY);
-        });
+            const touch = touches[0];
+            this.touchStartPos = {
+                x: (touch.clientX - rect.left) * scaleX,
+                y: (touch.clientY - rect.top) * scaleY
+            };
+        }
+        this.updateMobilePosition(touches);
+    }, { passive: false });
 
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'KeyZ') this.laserKeyDown = true;
-            if (e.code === 'KeyX') this.useBomb();
-        });
-        window.addEventListener('keyup', (e) => {
-            if (e.code === 'KeyZ') this.laserKeyDown = false;
-        });
+    this.canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (!this.gameRunning || this.gameOver || this.gameComplete) return;
+        this.twoFingers = e.touches.length >= 2;
+        this.updateMobilePosition(e.touches);
+    }, { passive: false });
 
-        this.canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (!this.gameRunning || this.gameOver || this.gameComplete) return;
-            const touches = e.touches;
-            this.twoFingers = touches.length >= 2;
-            this.touchStartFingers = touches.length;
-            if (touches.length === 1) {
-                this.touchStartTime = Date.now();
-                const rect = this.canvas.getBoundingClientRect();
-                const scaleX = this.canvas.width / rect.width;
-                const scaleY = this.canvas.height / rect.height;
-                const touch = touches[0];
-                this.touchStartPos = {
-                    x: (touch.clientX - rect.left) * scaleX,
-                    y: (touch.clientY - rect.top) * scaleY
-                };
-            }
-            this.updateMobilePosition(touches);
-        }, { passive: false });
+    this.canvas.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        if (!this.gameRunning || this.gameOver || this.gameComplete) {
+            this.twoFingers = false;
+            return;
+        }
+        if (this.touchStartFingers === 1 && this.touchStartPos) {
+            const dt = Date.now() - this.touchStartTime;
+            const dx = Math.abs(this.mouseX - this.touchStartPos.x);
+            const dy = Math.abs(this.mouseY - this.touchStartPos.y);
+            if (dt < 300 && dx < 20 && dy < 20) this.useBomb();
+        }
+        this.twoFingers = e.touches.length >= 2;
+        if (e.touches.length > 0) this.updateMobilePosition(e.touches);
+        this.touchStartPos = null;
+        this.touchStartFingers = 0;
+    });
 
-        this.canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            if (!this.gameRunning || this.gameOver || this.gameComplete) return;
-            this.twoFingers = e.touches.length >= 2;
-            this.updateMobilePosition(e.touches);
-        }, { passive: false });
+    document.getElementById('startButton').addEventListener('click', () => {
+        this.sound.init();
+        const bgm = document.getElementById('bgMusic');
+        if (bgm) {
+            bgm.pause();
+            bgm.currentTime = 0;
+            bgm.volume = 0.7;
+            setTimeout(() => {
+                bgm.play()
+                    .then(() => console.log('Музыка запущена'))
+                    .catch(e => console.error('Ошибка музыки:', e));
+            }, 50);
+        }
+        this.startCountdown();
+    });
 
-        this.canvas.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            if (!this.gameRunning || this.gameOver || this.gameComplete) {
-                this.twoFingers = false;
-                return;
-            }
-            if (this.touchStartFingers === 1 && this.touchStartPos) {
-                const dt = Date.now() - this.touchStartTime;
-                const dx = Math.abs(this.mouseX - this.touchStartPos.x);
-                const dy = Math.abs(this.mouseY - this.touchStartPos.y);
-                if (dt < 300 && dx < 20 && dy < 20) this.useBomb();
-            }
-            this.twoFingers = e.touches.length >= 2;
-            if (e.touches.length > 0) this.updateMobilePosition(e.touches);
-            this.touchStartPos = null;
-            this.touchStartFingers = 0;
-        });
-
-        document.getElementById('startButton').addEventListener('click', () => {
-            this.sound.init();
-            this.initMusic(); // Инициализируем музыку при клике
-            this.startCountdown();
-        });
-
-        document.getElementById('restartButton').addEventListener('click', () => {
-            this.initMusic(); // Повторно инициализируем музыку при рестарте
-            this.startCountdown();
-        });
-    }
+    document.getElementById('restartButton').addEventListener('click', () => {
+        const bgm = document.getElementById('bgMusic');
+        if (bgm && bgm.paused) {
+            setTimeout(() => {
+                bgm.play()
+                    .then(() => console.log('Музыка перезапущена'))
+                    .catch(e => console.error('Ошибка музыки:', e));
+            }, 50);
+        }
+        this.startCountdown();
+    });
+}
 
     updateMobilePosition(touches) {
         if (touches.length === 0) return;
