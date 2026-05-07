@@ -68,11 +68,15 @@ class SoundManager {
 
 // ---------- Основные классы ----------
 class Player {
-    constructor(x, y) {
+    constructor(x, y, sprite) {
         this.x = x;
         this.y = y;
-        this.width = 16;
+        this.width = 16;   // для расчёта границ (не размер спрайта)
         this.height = 16;
+        this.sprite = sprite;   // Image объект
+        // Размеры отображаемого спрайта (масштабированные)
+        this.displayWidth = 30;
+        this.displayHeight = Math.floor(30 * (96 / 55)); // ~52px (пропорции)
         this.lives = 3;
         this.bombs = 3;
         this.score = 0;
@@ -84,8 +88,8 @@ class Player {
     update(targetX, targetY) {
         this.x = targetX;
         this.y = targetY;
-        this.x = Math.max(this.width / 2, Math.min(400 - this.width / 2, this.x));
-        this.y = Math.max(this.height / 2, Math.min(600 - this.height / 2, this.y));
+        this.x = Math.max(this.displayWidth / 2, Math.min(400 - this.displayWidth / 2, this.x));
+        this.y = Math.max(this.displayHeight / 2, Math.min(600 - this.displayHeight / 2, this.y));
         if (this.invulnerable) {
             this.invulnerableTimer--;
             if (this.invulnerableTimer <= 0) this.invulnerable = false;
@@ -95,23 +99,32 @@ class Player {
 
     draw(ctx) {
         ctx.save();
+        // Мигание при неуязвимости: каждый второй «тик» пропускаем отрисовку
         if (!this.invulnerable || Math.floor(Date.now() / 100) % 2) {
-            ctx.fillStyle = '#00ffcc';
-            ctx.shadowBlur = 12;
-            ctx.shadowColor = '#00ffcc';
-            ctx.beginPath();
-            ctx.moveTo(this.x, this.y - 12);
-            ctx.lineTo(this.x - 8, this.y + 8);
-            ctx.lineTo(this.x + 8, this.y + 8);
-            ctx.closePath();
-            ctx.fill();
-            ctx.fillStyle = '#ffffff';
-            ctx.shadowBlur = 0;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y - 2, 3, 0, Math.PI * 2);
-            ctx.fill();
+            if (this.sprite && this.sprite.complete) {
+                // Рисуем спрайт по центру
+                ctx.drawImage(
+                    this.sprite,
+                    this.x - this.displayWidth / 2,
+                    this.y - this.displayHeight / 2,
+                    this.displayWidth,
+                    this.displayHeight
+                );
+            } else {
+                // Запасной треугольник, если спрайт ещё грузится
+                ctx.fillStyle = '#00ffcc';
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#00ffcc';
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y - 12);
+                ctx.lineTo(this.x - 8, this.y + 8);
+                ctx.lineTo(this.x + 8, this.y + 8);
+                ctx.closePath();
+                ctx.fill();
+            }
         }
-        // Хитбокс (точка)
+
+        // Хитбокс (точка) всегда видна
         ctx.fillStyle = '#ffffff';
         ctx.shadowBlur = 8;
         ctx.shadowColor = '#ff0000';
@@ -270,11 +283,13 @@ class Game {
 
         // Скроллящийся фон
         this.bgImage = new Image();
-        this.bgImage.src = 'assets/background.png'; // ← путь к твоей картинке
+        t// Загрузка спрайта игрока
+            this.playerSprite = new Image();
+            this.playerSprite.src = 'assets/player.png'; // ← путь к твоей картинке
         this.bgY = 0;              // текущее смещение по Y
         this.bgSpeed = 5;        // пикселей за кадр (регулируй скорость)
 
-        this.player = new Player(200, 500);
+        this.player = new Player(200, 500, this.playerSprite);
         this.bullets = [];
         this.enemies = [];
         this.mouseX = 200;
@@ -548,7 +563,7 @@ class Game {
     startCountdown() {
         document.getElementById('startScreen').classList.add('hidden');
         document.getElementById('gameOver').classList.add('hidden');
-        this.player = new Player(200, 500);
+        this.player = new Player(200, 500, this.playerSprite);
         this.bullets = [];
         this.enemies = [];
         this.wave = 0;
