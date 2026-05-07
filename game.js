@@ -106,7 +106,7 @@ class Player {
                 // Рисуем изображение по центру
                 const w = this.width;
                 const h = this.height;
-                ctx.drawImage(this.image, this.x - w/2, this.y - h/2 + 5, w, h);
+                ctx.drawImage(this.image, this.x - w/2, this.y - h/2 + 30, w, h);
             } else {
                 // Запасной спрайт, если изображение ещё не загружено
                 ctx.fillStyle = '#00ffcc';
