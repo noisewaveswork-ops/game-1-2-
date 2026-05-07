@@ -272,7 +272,7 @@ class Game {
         this.bgImage = new Image();
         this.bgImage.src = 'assets/background.png'; // ← путь к твоей картинке
         this.bgY = 0;              // текущее смещение по Y
-        this.bgSpeed = 1.5;        // пикселей за кадр (регулируй скорость)
+        this.bgSpeed = 3;        // пикселей за кадр (регулируй скорость)
 
         this.player = new Player(200, 500);
         this.bullets = [];
