@@ -550,6 +550,10 @@ class Game {
         this.accumulator = 0;
         this.fixedDelta = 1000 / 60;
 
+        // Музыка
+        this.bgmElement = document.getElementById('bgMusic');
+        this.musicInitialized = false;
+
         this.defineWavePatterns();
         this.setupEventListeners();
         requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
@@ -668,107 +672,104 @@ class Game {
         document.getElementById('mobileControls').classList.toggle('hidden', !this.isMobile);
     }
 
+    // Метод для инициализации музыки
+    initMusic() {
+        if (this.musicInitialized) return;
+        
+        if (this.bgmElement) {
+            // Пытаемся воспроизвести музыку
+            const playPromise = this.bgmElement.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    console.log('Музыка запущена успешно');
+                    this.musicInitialized = true;
+                }).catch(error => {
+                    console.warn('Не удалось запустить музыку:', error);
+                    // Пробуем еще раз с небольшой задержкой
+                    setTimeout(() => {
+                        this.bgmElement.play().catch(e => 
+                            console.warn('Повторная попытка запуска музыки не удалась:', e)
+                        );
+                    }, 1000);
+                });
+            }
+        }
+    }
 
     setupEventListeners() {
-    this.canvas.addEventListener('mousemove', (e) => {
-        if (this.isMobile) return;
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        this.mouseX = (e.clientX - rect.left) * scaleX;
-        this.mouseY = (e.clientY - rect.top) * scaleY;
-        this.player.update(this.mouseX, this.mouseY);
-    });
-
-    window.addEventListener('keydown', (e) => {
-        if (e.code === 'KeyZ') this.laserKeyDown = true;
-        if (e.code === 'KeyX') this.useBomb();
-    });
-    window.addEventListener('keyup', (e) => {
-        if (e.code === 'KeyZ') this.laserKeyDown = false;
-    });
-
-    this.canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (!this.gameRunning || this.gameOver || this.gameComplete) return;
-        const touches = e.touches;
-        this.twoFingers = touches.length >= 2;
-        this.touchStartFingers = touches.length;
-        if (touches.length === 1) {
-            this.touchStartTime = Date.now();
+        this.canvas.addEventListener('mousemove', (e) => {
+            if (this.isMobile) return;
             const rect = this.canvas.getBoundingClientRect();
             const scaleX = this.canvas.width / rect.width;
             const scaleY = this.canvas.height / rect.height;
-            const touch = touches[0];
-            this.touchStartPos = {
-                x: (touch.clientX - rect.left) * scaleX,
-                y: (touch.clientY - rect.top) * scaleY
-            };
-        }
-        this.updateMobilePosition(touches);
-    }, { passive: false });
+            this.mouseX = (e.clientX - rect.left) * scaleX;
+            this.mouseY = (e.clientY - rect.top) * scaleY;
+            this.player.update(this.mouseX, this.mouseY);
+        });
 
-    this.canvas.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        if (!this.gameRunning || this.gameOver || this.gameComplete) return;
-        this.twoFingers = e.touches.length >= 2;
-        this.updateMobilePosition(e.touches);
-    }, { passive: false });
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyZ') this.laserKeyDown = true;
+            if (e.code === 'KeyX') this.useBomb();
+        });
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyZ') this.laserKeyDown = false;
+        });
 
-    this.canvas.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        if (!this.gameRunning || this.gameOver || this.gameComplete) {
-            this.twoFingers = false;
-            return;
-        }
-        if (this.touchStartFingers === 1 && this.touchStartPos) {
-            const dt = Date.now() - this.touchStartTime;
-            const dx = Math.abs(this.mouseX - this.touchStartPos.x);
-            const dy = Math.abs(this.mouseY - this.touchStartPos.y);
-            if (dt < 300 && dx < 20 && dy < 20) this.useBomb();
-        }
-        this.twoFingers = e.touches.length >= 2;
-        if (e.touches.length > 0) this.updateMobilePosition(e.touches);
-        this.touchStartPos = null;
-        this.touchStartFingers = 0;
-    });
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!this.gameRunning || this.gameOver || this.gameComplete) return;
+            const touches = e.touches;
+            this.twoFingers = touches.length >= 2;
+            this.touchStartFingers = touches.length;
+            if (touches.length === 1) {
+                this.touchStartTime = Date.now();
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                const touch = touches[0];
+                this.touchStartPos = {
+                    x: (touch.clientX - rect.left) * scaleX,
+                    y: (touch.clientY - rect.top) * scaleY
+                };
+            }
+            this.updateMobilePosition(touches);
+        }, { passive: false });
 
-    document.getElementById('startButton').addEventListener('click', () => {
-        this.sound.init();
-        const bgm = document.getElementById('bgMusic');
-        if (bgm) {
-            bgm.currentTime = 0;
-            bgm.volume = 0.7;
-            bgm.play()
-                .then(() => console.log('Музыка запущена'))
-                .catch(e => console.error('Ошибка музыки:', e));
-        }
-        this.startCountdown();
-    });
+        this.canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!this.gameRunning || this.gameOver || this.gameComplete) return;
+            this.twoFingers = e.touches.length >= 2;
+            this.updateMobilePosition(e.touches);
+        }, { passive: false });
 
-    document.getElementById('restartButton').addEventListener('click', () => {
-        this.startCountdown();
-    });
-}
-
-
-    
+        this.canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (!this.gameRunning || this.gameOver || this.gameComplete) {
+                this.twoFingers = false;
+                return;
+            }
+            if (this.touchStartFingers === 1 && this.touchStartPos) {
+                const dt = Date.now() - this.touchStartTime;
+                const dx = Math.abs(this.mouseX - this.touchStartPos.x);
+                const dy = Math.abs(this.mouseY - this.touchStartPos.y);
+                if (dt < 300 && dx < 20 && dy < 20) this.useBomb();
+            }
+            this.twoFingers = e.touches.length >= 2;
+            if (e.touches.length > 0) this.updateMobilePosition(e.touches);
+            this.touchStartPos = null;
+            this.touchStartFingers = 0;
+        });
 
         document.getElementById('startButton').addEventListener('click', () => {
             this.sound.init();
-        const bgm = document.getElementById('bgMusic');
-            if (bgm) {
-        // Сначала явно сбрасываем, затем играем
-            bgm.currentTime = 0;
-            bgm.volume = 0.7; // добавьте громкость, если нужно
-            const playPromise = bgm.play();
-        if (playPromise !== undefined) {
-            playPromise
-                .then(() => console.log('Музыка запущена'))
-                .catch(e => console.error('Ошибка запуска музыки:', e));
-            }
-        }
-        this.startCountdown();
+            this.initMusic(); // Инициализируем музыку при клике
+            this.startCountdown();
+        });
+
+        document.getElementById('restartButton').addEventListener('click', () => {
+            this.initMusic(); // Повторно инициализируем музыку при рестарте
+            this.startCountdown();
         });
     }
 
@@ -836,6 +837,11 @@ class Game {
         document.getElementById('gameOver').classList.remove('hidden');
         document.querySelector('#gameOver h2').textContent = 'Поздравляем!';
         this.sound.waveStart();
+        
+        // Останавливаем музыку при победе
+        if (this.bgmElement) {
+            this.bgmElement.pause();
+        }
     }
 
     update() {
@@ -987,6 +993,11 @@ class Game {
         document.getElementById('gameOver').classList.remove('hidden');
         document.querySelector('#gameOver h2').textContent = 'Игра окончена!';
         this.sound.playerDeath();
+        
+        // Останавливаем музыку при смерти
+        if (this.bgmElement) {
+            this.bgmElement.pause();
+        }
     }
 
     drawUI() {
