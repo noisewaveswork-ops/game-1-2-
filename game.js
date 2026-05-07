@@ -290,11 +290,15 @@ class Game {
         this.playerImage = new Image();
         this.playerImage.src = 'assets/player.png';
 
-        // Изображения сердечек
+        // Иконки UI
         this.heartFull = new Image();
         this.heartFull.src = 'assets/heart_full.png';
         this.heartEmpty = new Image();
         this.heartEmpty.src = 'assets/heart_empty.png';
+        this.bombFull = new Image();
+        this.bombFull.src = 'assets/bomb_full.png';
+        this.bombEmpty = new Image();
+        this.bombEmpty.src = 'assets/bomb_empty.png';
 
         this.player = new Player(200, 500, this.playerImage);
         this.bullets = [];
@@ -697,48 +701,69 @@ class Game {
     }
 
     drawUI() {
-        // Отрисовка сердечек (3 слота)
-        const heartSize = 20; // размер иконки (можно менять)
+        const iconSize = 20; // размер иконок
+
+        // Сердечки (левый верх)
         for (let i = 0; i < 3; i++) {
-            const x = 20 + i * 24; // отступ между сердечками
+            const x = 20 + i * 24;
             const y = 20;
             const img = i < this.player.lives ? this.heartFull : this.heartEmpty;
             if (img && img.complete && img.naturalWidth > 0) {
-                this.ctx.drawImage(img, x, y, heartSize, heartSize);
-            }
-        }
-
-        // Бомбы
-        const bombY = 580;
-        for (let i = 0; i < 3; i++) {
-            const x = 160 + i * 40;
-            this.ctx.save();
-            this.ctx.fillStyle = '#222';
-            this.ctx.strokeStyle = i < this.player.bombs ? '#ffaa00' : '#555';
-            this.ctx.shadowBlur = i < this.player.bombs ? 8 : 0;
-            this.ctx.shadowColor = '#ffaa00';
-            this.ctx.beginPath();
-            this.ctx.arc(x, bombY, 8, 0, Math.PI * 2);
-            this.ctx.fill();
-            this.ctx.stroke();
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, bombY - 8);
-            this.ctx.lineTo(x + 4, bombY - 14);
-            this.ctx.strokeStyle = '#ffaa00';
-            this.ctx.lineWidth = 2;
-            this.ctx.stroke();
-            if (i < this.player.bombs) {
-                this.ctx.fillStyle = '#ff4400';
-                this.ctx.shadowBlur = 6;
-                this.ctx.shadowColor = '#ff4400';
+                this.ctx.drawImage(img, x, y, iconSize, iconSize);
+            } else {
+                // Запасной вариант для сердечек
+                this.ctx.save();
+                this.ctx.fillStyle = i < this.player.lives ? '#ff3366' : '#444';
+                this.ctx.shadowBlur = i < this.player.lives ? 8 : 0;
+                this.ctx.shadowColor = '#ff3366';
                 this.ctx.beginPath();
-                this.ctx.arc(x + 4, bombY - 16, 3, 0, 2 * Math.PI);
+                this.ctx.arc(x - 5, y - 4, 4, Math.PI, 0, false);
+                this.ctx.arc(x + 5, y - 4, 4, Math.PI, 0, false);
+                this.ctx.moveTo(x - 9, y - 2);
+                this.ctx.lineTo(x, y + 8);
+                this.ctx.lineTo(x + 9, y - 2);
                 this.ctx.fill();
+                this.ctx.restore();
             }
-            this.ctx.restore();
         }
 
-        // Волна
+        // Бомбы (низ по центру)
+        for (let i = 0; i < 3; i++) {
+            const x = 164 + i * (iconSize + 12);
+            const y = 568;
+            const img = i < this.player.bombs ? this.bombFull : this.bombEmpty;
+            if (img && img.complete && img.naturalWidth > 0) {
+                this.ctx.drawImage(img, x, y, iconSize, iconSize);
+            } else {
+                // Запасной вариант для бомб
+                this.ctx.save();
+                this.ctx.fillStyle = '#222';
+                this.ctx.strokeStyle = i < this.player.bombs ? '#ffaa00' : '#555';
+                this.ctx.shadowBlur = i < this.player.bombs ? 8 : 0;
+                this.ctx.shadowColor = '#ffaa00';
+                this.ctx.beginPath();
+                this.ctx.arc(x + 8, y + 8, 8, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.stroke();
+                this.ctx.beginPath();
+                this.ctx.moveTo(x + 8, y);
+                this.ctx.lineTo(x + 12, y - 6);
+                this.ctx.strokeStyle = '#ffaa00';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+                if (i < this.player.bombs) {
+                    this.ctx.fillStyle = '#ff4400';
+                    this.ctx.shadowBlur = 6;
+                    this.ctx.shadowColor = '#ff4400';
+                    this.ctx.beginPath();
+                    this.ctx.arc(x + 12, y - 8, 3, 0, 2 * Math.PI);
+                    this.ctx.fill();
+                }
+                this.ctx.restore();
+            }
+        }
+
+        // Номер волны
         this.ctx.fillStyle = '#ffffff';
         this.ctx.font = '14px Arial';
         this.ctx.textAlign = 'right';
