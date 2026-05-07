@@ -1,4 +1,4 @@
-// Звуковой менеджер (Web Audio API синтез)
+// ---------- Звуковой менеджер (Web Audio API синтез) ----------
 class SoundManager {
     constructor() {
         this.ctx = null;
@@ -66,7 +66,7 @@ class SoundManager {
     }
 }
 
-// ---------- Классы игры ----------
+// ---------- Основные классы ----------
 class Player {
     constructor(x, y) {
         this.x = x;
@@ -86,7 +86,6 @@ class Player {
         this.y = targetY;
         this.x = Math.max(this.width / 2, Math.min(400 - this.width / 2, this.x));
         this.y = Math.max(this.height / 2, Math.min(600 - this.height / 2, this.y));
-
         if (this.invulnerable) {
             this.invulnerableTimer--;
             if (this.invulnerableTimer <= 0) this.invulnerable = false;
@@ -112,7 +111,6 @@ class Player {
             ctx.arc(this.x, this.y - 2, 3, 0, Math.PI * 2);
             ctx.fill();
         }
-
         // Хитбокс (точка)
         ctx.fillStyle = '#ffffff';
         ctx.shadowBlur = 8;
@@ -256,6 +254,7 @@ class Enemy {
     }
 }
 
+// ---------- Главный класс игры ----------
 class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
@@ -268,6 +267,12 @@ class Game {
 
         this.sound = new SoundManager();
         this.gameStarted = false;
+
+        // Скроллящийся фон
+        this.bgImage = new Image();
+        this.bgImage.src = 'assets/background.png'; // ← путь к твоей картинке
+        this.bgY = 0;              // текущее смещение по Y
+        this.bgSpeed = 1.5;        // пикселей за кадр (регулируй скорость)
 
         this.player = new Player(200, 500);
         this.bullets = [];
@@ -293,14 +298,13 @@ class Game {
         this.countdownTimer = 0;
         this.countdownText = '';
 
-        // ---- Для фиксированного шага времени ----
-        this.lastTime = 0;               // предыдущее время
-        this.accumulator = 0;            // накопленное время
-        this.fixedDelta = 1000 / 60;     // 16.67 мс = 60 fps
+        // Фиксированный временной шаг
+        this.lastTime = 0;
+        this.accumulator = 0;
+        this.fixedDelta = 1000 / 60;
 
         this.defineWavePatterns();
         this.setupEventListeners();
-        // Запускаем игровой цикл через requestAnimationFrame
         requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
     }
 
@@ -516,54 +520,15 @@ class Game {
         });
 
         document.getElementById('startButton').addEventListener('click', () => {
-    this.sound.init();
-    
-    // Запускаем фоновое видео (если ещё не играет)
-    const bgVideo = document.getElementById('bgVideo');
-    if (bgVideo) {
-        bgVideo.play().catch(e => console.warn('Видео не запустилось:', e));
-    }
-
-    // Запускаем музыку
-    const bgm = document.getElementById('bgMusic');
-    if (bgm && bgm.paused) bgm.play().catch(e => console.warn('Музыка не запустилась:', e));
-    
-    this.startCountdown();
-});
-        document.getElementById('restartButton').addEventListener('click', () => {
+            this.sound.init();
+            const bgm = document.getElementById('bgMusic');
+            if (bgm && bgm.paused) bgm.play().catch(e => console.warn('Музыка не запустилась:', e));
             this.startCountdown();
         });
 
-        // Автопауза при скрытии (IntersectionObserver)
-        const observer = new IntersectionObserver((entries) => {
-            const bgm = document.getElementById('bgMusic');
-            if (!bgm) return;
-            if (entries[0].isIntersecting) {
-                if (this.gameStarted && bgm.paused) bgm.play().catch(e => {});
-            } else {
-                bgm.pause();
-            }
-        }, { threshold: 0 });
-        observer.observe(this.canvas);
-
-        // Сообщение от Тильды
-        window.addEventListener('message', (event) => {
-            if (event.data === 'pauseMusic') {
-                const bgm = document.getElementById('bgMusic');
-                if (bgm) bgm.pause();
-            }
+        document.getElementById('restartButton').addEventListener('click', () => {
+            this.startCountdown();
         });
-        // Проверка загрузки видео
-    const video = document.getElementById('bgVideo');
-        if (video) {
-        video.addEventListener('error', () => {
-            console.warn('Видео-фон не загрузился. Проверьте путь к файлу.');
-            video.style.display = 'none'; // скрыть сломанное видео
-            });
-            video.addEventListener('loadeddata', () => {
-                console.log('Видео-фон загружен');
-            });
-        }
     }
 
     updateMobilePosition(touches) {
@@ -627,6 +592,9 @@ class Game {
         }
 
         if (!this.gameRunning || this.gameOver) return;
+
+        // Сдвиг фона
+        this.bgY = (this.bgY + this.bgSpeed) % this.canvas.height;
 
         this.laserMode = this.laserKeyDown || this.twoFingers;
 
@@ -760,50 +728,51 @@ class Game {
     }
 
     draw() {
-    // Прозрачный фон — видео будет видно
-    this.ctx.clearRect(0, 0, 400, 600);
+        // Рисуем скроллящийся фон
+        if (this.bgImage.complete && this.bgImage.naturalWidth > 0) {
+            const h = this.canvas.height;
+            // Два тайла: один от bgY (верхний), другой от bgY - h (нижний)
+            this.ctx.drawImage(this.bgImage, 0, this.bgY, this.canvas.width, h);
+            this.ctx.drawImage(this.bgImage, 0, this.bgY - h, this.canvas.width, h);
+        } else {
+            // Запасной тёмный фон, пока картинка грузится
+            this.ctx.fillStyle = '#0a0a1a';
+            this.ctx.fillRect(0, 0, 400, 600);
+        }
 
-    this.enemies.forEach(e => e.draw(this.ctx));
-    this.bullets.forEach(b => b.draw(this.ctx));
-    this.player.draw(this.ctx);
-    this.drawUI();
+        // Поверх фона — игра
+        this.enemies.forEach(e => e.draw(this.ctx));
+        this.bullets.forEach(b => b.draw(this.ctx));
+        this.player.draw(this.ctx);
+        this.drawUI();
 
-    if (this.countdown > 0 && this.countdownText) {
-        this.ctx.save();
-        this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        this.ctx.fillRect(0, 0, 400, 600);
-        this.ctx.font = 'bold 120px Arial';
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.textAlign = 'center';
-        this.ctx.shadowBlur = 20;
-        this.ctx.shadowColor = '#ff0000';
-        this.ctx.fillText(this.countdownText, 200, 320);
-        this.ctx.restore();
+        if (this.countdown > 0 && this.countdownText) {
+            this.ctx.save();
+            this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            this.ctx.fillRect(0, 0, 400, 600);
+            this.ctx.font = 'bold 120px Arial';
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.textAlign = 'center';
+            this.ctx.shadowBlur = 20;
+            this.ctx.shadowColor = '#ff0000';
+            this.ctx.fillText(this.countdownText, 200, 320);
+            this.ctx.restore();
+        }
     }
-}
 
     gameLoop(timestamp) {
-        // Рассчитываем прошедшее время
         if (this.lastTime === 0) this.lastTime = timestamp;
         let delta = timestamp - this.lastTime;
         this.lastTime = timestamp;
-
-        // Предотвращаем слишком большой delta (например, после паузы)
         if (delta > 1000) delta = 1000;
 
-        // Накапливаем время
         this.accumulator += delta;
-
-        // Выполняем фиксированные шаги обновления (60 раз в секунду)
         while (this.accumulator >= this.fixedDelta) {
-            this.update(); // один шаг = 1/60 сек
+            this.update();
             this.accumulator -= this.fixedDelta;
         }
 
-        // Отрисовываем каждый кадр (с той частотой, которая доступна)
         this.draw();
-
-        // Запускаем следующий кадр
         requestAnimationFrame((nextTimestamp) => this.gameLoop(nextTimestamp));
     }
 }
