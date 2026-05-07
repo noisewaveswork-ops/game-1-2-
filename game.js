@@ -68,15 +68,12 @@ class SoundManager {
 
 // ---------- Основные классы ----------
 class Player {
-    constructor(x, y, sprite) {
+    constructor(x, y, image) {
         this.x = x;
         this.y = y;
-        this.width = 16;   // для расчёта границ (не размер спрайта)
-        this.height = 16;
-        this.sprite = sprite;   // Image объект
-        // Размеры отображаемого спрайта (масштабированные)
-        this.displayWidth = 30;
-        this.displayHeight = Math.floor(30 * (96 / 55)); // ~52px (пропорции)
+        this.image = image;                // изображение игрока
+        this.width = image ? image.width : 16;
+        this.height = image ? image.height : 16;
         this.lives = 3;
         this.bombs = 3;
         this.score = 0;
@@ -88,8 +85,12 @@ class Player {
     update(targetX, targetY) {
         this.x = targetX;
         this.y = targetY;
-        this.x = Math.max(this.displayWidth / 2, Math.min(400 - this.displayWidth / 2, this.x));
-        this.y = Math.max(this.displayHeight / 2, Math.min(600 - this.displayHeight / 2, this.y));
+        // Ограничиваем по границам, учитывая реальные размеры спрайта
+        const halfW = this.width / 2;
+        const halfH = this.height / 2;
+        this.x = Math.max(halfW, Math.min(400 - halfW, this.x));
+        this.y = Math.max(halfH, Math.min(600 - halfH, this.y));
+
         if (this.invulnerable) {
             this.invulnerableTimer--;
             if (this.invulnerableTimer <= 0) this.invulnerable = false;
@@ -99,19 +100,15 @@ class Player {
 
     draw(ctx) {
         ctx.save();
-        // Мигание при неуязвимости: каждый второй «тик» пропускаем отрисовку
+        // Мигание при неуязвимости
         if (!this.invulnerable || Math.floor(Date.now() / 100) % 2) {
-            if (this.sprite && this.sprite.complete) {
-                // Рисуем спрайт по центру
-                ctx.drawImage(
-                    this.sprite,
-                    this.x - this.displayWidth / 2,
-                    this.y - this.displayHeight / 2,
-                    this.displayWidth,
-                    this.displayHeight
-                );
+            if (this.image && this.image.complete && this.image.naturalWidth > 0) {
+                // Рисуем изображение по центру
+                const w = this.width;
+                const h = this.height;
+                ctx.drawImage(this.image, this.x - w/2, this.y - h/2, w, h);
             } else {
-                // Запасной треугольник, если спрайт ещё грузится
+                // Запасной спрайт, если изображение ещё не загружено
                 ctx.fillStyle = '#00ffcc';
                 ctx.shadowBlur = 12;
                 ctx.shadowColor = '#00ffcc';
@@ -121,10 +118,15 @@ class Player {
                 ctx.lineTo(this.x + 8, this.y + 8);
                 ctx.closePath();
                 ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowBlur = 0;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y - 2, 3, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
 
-        // Хитбокс (точка) всегда видна
+        // Хитбокс (точка) — всегда видна
         ctx.fillStyle = '#ffffff';
         ctx.shadowBlur = 8;
         ctx.shadowColor = '#ff0000';
@@ -283,13 +285,15 @@ class Game {
 
         // Скроллящийся фон
         this.bgImage = new Image();
-        t// Загрузка спрайта игрока
-            this.playerSprite = new Image();
-            this.playerSprite.src = 'assets/player.png'; // ← путь к твоей картинке
-        this.bgY = 0;              // текущее смещение по Y
-        this.bgSpeed = 5;        // пикселей за кадр (регулируй скорость)
+        this.bgImage.src = 'assets/background.png';
+        this.bgY = 0;
+        this.bgSpeed = 5;
 
-        this.player = new Player(200, 500, this.playerSprite);
+        // Изображение игрока
+        this.playerImage = new Image();
+        this.playerImage.src = 'assets/player.png';   // ← ваш спрайт
+
+        this.player = new Player(200, 500, this.playerImage);
         this.bullets = [];
         this.enemies = [];
         this.mouseX = 200;
@@ -563,7 +567,7 @@ class Game {
     startCountdown() {
         document.getElementById('startScreen').classList.add('hidden');
         document.getElementById('gameOver').classList.add('hidden');
-        this.player = new Player(200, 500, this.playerSprite);
+        this.player = new Player(200, 500, this.playerImage);
         this.bullets = [];
         this.enemies = [];
         this.wave = 0;
@@ -743,24 +747,23 @@ class Game {
     }
 
     draw() {
-        // Рисуем скроллящийся фон
+        // Скроллящийся фон
         if (this.bgImage.complete && this.bgImage.naturalWidth > 0) {
             const h = this.canvas.height;
-            // Два тайла: один от bgY (верхний), другой от bgY - h (нижний)
             this.ctx.drawImage(this.bgImage, 0, this.bgY, this.canvas.width, h);
             this.ctx.drawImage(this.bgImage, 0, this.bgY - h, this.canvas.width, h);
         } else {
-            // Запасной тёмный фон, пока картинка грузится
             this.ctx.fillStyle = '#0a0a1a';
             this.ctx.fillRect(0, 0, 400, 600);
         }
 
-        // Поверх фона — игра
+        // Игровые объекты
         this.enemies.forEach(e => e.draw(this.ctx));
         this.bullets.forEach(b => b.draw(this.ctx));
         this.player.draw(this.ctx);
         this.drawUI();
 
+        // Обратный отсчёт
         if (this.countdown > 0 && this.countdownText) {
             this.ctx.save();
             this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
