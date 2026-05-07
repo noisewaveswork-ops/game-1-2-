@@ -734,13 +734,19 @@ class Game {
 
         document.getElementById('startButton').addEventListener('click', () => {
             this.sound.init();
-            const bgm = document.getElementById('bgMusic');
-            if (bgm && bgm.paused) bgm.play().catch(e => console.warn('Музыка не запустилась:', e));
-            this.startCountdown();
-        });
-
-        document.getElementById('restartButton').addEventListener('click', () => {
-            this.startCountdown();
+        const bgm = document.getElementById('bgMusic');
+            if (bgm) {
+        // Сначала явно сбрасываем, затем играем
+            bgm.currentTime = 0;
+            bgm.volume = 0.7; // добавьте громкость, если нужно
+            const playPromise = bgm.play();
+        if (playPromise !== undefined) {
+            playPromise
+                .then(() => console.log('Музыка запущена'))
+                .catch(e => console.error('Ошибка запуска музыки:', e));
+            }
+        }
+        this.startCountdown();
         });
     }
 
