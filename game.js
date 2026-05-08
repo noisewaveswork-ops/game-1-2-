@@ -132,7 +132,6 @@ class Player {
             }
         }
 
-        // Хитбокс (точка) - цвет #7ab6ff
         ctx.fillStyle = '#7ab6ff';
         ctx.shadowBlur = 12;
         ctx.shadowColor = '#7ab6ff';
@@ -289,332 +288,204 @@ class Enemy {
 }
 
 // ---------- Класс босса ----------
-// ---------- Класс босса ----------
 class Boss {
     constructor(x, y, game) {
         this.x = x;
         this.y = y;
         this.game = game;
-        this.maxHealth = 250; // Увеличено здоровье для более долгой битвы
+        this.maxHealth = 250;           // больше здоровья
         this.health = this.maxHealth;
-        this.phase = 0; // Начинаем с 0 для фазы входа
+        this.phase = 1;
         this.timer = 0;
         this.entered = false;
         this.targetY = 80;
-        this.points = 10000; // Увеличена награда
+        this.points = 10000;
         this.xDirection = 1;
         this.xSpeed = 1.5;
-        this.radius = 35; // Радиус для коллизий и отрисовки
     }
 
     update() {
         this.timer++;
         
-        // Фаза входа
+        // Вход
         if (!this.entered) {
-            this.y += (this.targetY - this.y) * 0.04;
+            this.y += (this.targetY - this.y) * 0.03;
             if (Math.abs(this.y - this.targetY) < 1) {
                 this.y = this.targetY;
                 this.entered = true;
                 this.timer = 0;
-                this.phase = 1; // Начинаем с фазы 1
                 this.game.sound.bossAppear();
             }
             return;
         }
 
-        // Определение фазы по здоровью
-        const healthPercent = this.health / this.maxHealth;
-        if (healthPercent > 0.7) {
-            if (this.phase !== 1) { this.phase = 1; this.timer = 0; this.game.sound.bossPhaseChange(); }
-        } else if (healthPercent > 0.4) {
-            if (this.phase !== 2) { this.phase = 2; this.timer = 0; this.game.sound.bossPhaseChange(); }
-        } else {
-            if (this.phase !== 3) { this.phase = 3; this.timer = 0; this.game.sound.bossPhaseChange(); }
+        // Фазы по здоровью: 1 (>60%), 2 (30-60%), 3 (<30%)
+        const hp = this.health / this.maxHealth;
+        const newPhase = hp > 0.6 ? 1 : (hp > 0.3 ? 2 : 3);
+        if (newPhase !== this.phase) {
+            this.phase = newPhase;
+            this.timer = 0;
+            this.game.sound.bossPhaseChange();
         }
 
-        // Движение из стороны в сторону
+        // Движение строго горизонтально
         this.y = this.targetY;
         this.x += this.xSpeed * this.xDirection;
         if (this.x >= 340) { this.x = 340; this.xDirection = -1; }
         else if (this.x <= 60) { this.x = 60; this.xDirection = 1; }
 
-        // Атаки по фазам
-        this.performAttacks();
-    }
-
-    performAttacks() {
+        // Атаки в стиле Touhou (медленные плотные паттерны)
         switch(this.phase) {
             case 1:
-                this.phase1Attacks();
-                break;
-            case 2:
-                this.phase2Attacks();
-                break;
-            case 3:
-                this.phase3Attacks();
-                break;
-        }
-    }
-
-    phase1Attacks() {
-        // Атака 1: "Дождь" - медленные синие пули, падающие по дуге (каждые 60 кадров)
-        if (this.timer % 60 === 0) {
-            for (let i = -3; i <= 3; i++) {
-                // Пули падают веером вниз с разной скоростью
-                const speed = 2.5 + Math.abs(i) * 0.2;
-                const angle = Math.PI/2 + i * 0.15; // Почти вниз, с небольшим разбросом
-                this.game.bullets.push(new Bullet(this.x + i * 10, this.y + 20, angle, speed, true));
-            }
-            this.game.sound.enemyShoot();
-        }
-
-        // Атака 2: Прицельные кольца (каждые 80 кадров)
-        if (this.timer % 80 === 0) {
-            const angleToPlayer = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
-            // Создаём кольцо из 12 быстрых пуль вокруг босса
-            for (let i = 0; i < 12; i++) {
-                const angle = (Math.PI * 2 / 12) * i;
-                this.game.bullets.push(new Bullet(this.x, this.y, angle, 3, true));
-            }
-            // И одну направленную в игрока тройку
-            for (let i = -1; i <= 1; i++) {
-                this.game.bullets.push(new Bullet(this.x, this.y + 10, angleToPlayer + i * 0.1, 4.5, true));
-            }
-            this.game.sound.enemyShoot();
-        }
-    }
-
-    phase2Attacks() {
-        // Атака 1: "Спираль" из Touhou - очень медленная, но плотная (каждые 100 кадров)
-        if (this.timer % 100 === 0) {
-            for (let i = 0; i < 36; i++) {
-                const angle = (Math.PI * 2 / 36) * i + this.timer * 0.02;
-                // Чередуем скорость и цвет для красоты
-                const speed = i % 2 === 0 ? 1.8 : 2.2;
-                const bullet = new Bullet(this.x, this.y, angle, speed, true);
-                if (i % 2 === 0) bullet.color = '#ffcc00'; // Жёлтые и оранжевые
-                else bullet.color = '#ff8800';
-                this.game.bullets.push(bullet);
-            }
-            this.game.sound.enemyShoot();
-        }
-
-        // Атака 2: "Веер" - ритмичные залпы по 5 пуль (каждые 45 кадров)
-        if (this.timer % 45 === 0) {
-            const angleToPlayer = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
-            for (let i = -2; i <= 2; i++) {
-                // Пули разлетаются широким веером
-                const angle = angleToPlayer + i * 0.4;
-                this.game.bullets.push(new Bullet(this.x, this.y + 30, angle, 3.5, true));
-            }
-            this.game.sound.enemyShoot();
-        }
-    }
-
-    phase3Attacks() {
-        // Финальная ярость!
-        
-        // Атака 1: "Залп" - прицельные очереди (каждые 70 кадров)
-        if (this.timer % 70 === 0) {
-            const angleToPlayer = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
-            // Создаём несколько очередей с задержкой
-            for (let j = 0; j < 4; j++) {
-                setTimeout(() => {
-                    if (this.health <= 0) return;
-                    for (let i = -3; i <= 3; i++) {
-                        const angle = angleToPlayer + i * 0.15;
-                        this.game.bullets.push(new Bullet(this.x, this.y + 20, angle, 4.5, true));
+                // Веерная атака: 5 струй, медленно
+                if (this.timer % 15 === 0) {
+                    const base = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
+                    for (let i = -2; i <= 2; i++) {
+                        this.game.bullets.push(new Bullet(this.x, this.y + 15, base + i * 0.18, 1.5, true));
                     }
                     this.game.sound.enemyShoot();
-                }, j * 120);
-            }
-        }
-
-        // Атака 2: "Стена" - медленная, но непроходимая стена из пуль (каждые 130 кадров)
-        if (this.timer % 130 === 0) {
-            // Стена из 3-х слоёв
-            for (let layer = 0; layer < 3; layer++) {
-                for (let i = 0; i < 15; i++) {
-                    const x = 30 + i * 25;
-                    const y = 80 + layer * 30;
-                    // Пули просто падают вниз
-                    this.game.bullets.push(new Bullet(x, y, Math.PI/2, 1.5 + layer * 0.3, true));
                 }
-            }
-            this.game.sound.enemyShoot();
-        }
-
-        // Атака 3: Классический Touhou-узор из перекрещивающихся спиралей (каждые 90 кадров)
-        if (this.timer % 90 === 0) {
-            for (let i = 0; i < 2; i++) {
-                const offset = i * Math.PI; // Вторая спираль повёрнута на 180 градусов
-                for (let j = 0; j < 16; j++) {
-                    const angle = (Math.PI * 2 / 16) * j + this.timer * 0.03 + offset;
-                    this.game.bullets.push(new Bullet(this.x, this.y, angle, 2.7, true));
+                // Круговая спираль 2 ряда
+                if (this.timer % 40 === 0) {
+                    for (let r = 0; r < 2; r++) {
+                        for (let i = 0; i < 10; i++) {
+                            const a = (Math.PI*2/10)*i + this.timer*0.03 + r*Math.PI/10;
+                            this.game.bullets.push(new Bullet(this.x, this.y, a, 1.8 + r*0.3, true));
+                        }
+                    }
+                    this.game.sound.enemyShoot();
                 }
-            }
-            this.game.sound.enemyShoot();
+                break;
+            case 2:
+                // Спираль 3 ряда с разной скоростью
+                if (this.timer % 30 === 0) {
+                    for (let r = 0; r < 3; r++) {
+                        for (let i = 0; i < 12; i++) {
+                            const a = (Math.PI*2/12)*i + this.timer*0.04 + r*Math.PI/12;
+                            this.game.bullets.push(new Bullet(this.x, this.y, a, 1.5 + r*0.4, true));
+                        }
+                    }
+                    this.game.sound.enemyShoot();
+                }
+                // Прицельная очередь с задержками
+                if (this.timer % 55 === 0) {
+                    const base = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
+                    for (let j = 0; j < 5; j++) {
+                        setTimeout(() => {
+                            if (this.health > 0) {
+                                for (let i = -1; i <= 1; i++) {
+                                    this.game.bullets.push(new Bullet(this.x, this.y+20, base + i*0.15, 2.5, true));
+                                }
+                                this.game.sound.enemyShoot();
+                            }
+                        }, j * 120);
+                    }
+                }
+                break;
+            case 3:
+                // Плотная спираль с переменной скоростью
+                if (this.timer % 25 === 0) {
+                    for (let r = 0; r < 4; r++) {
+                        for (let i = 0; i < 16; i++) {
+                            const a = (Math.PI*2/16)*i + this.timer*0.05 + r*Math.PI/16;
+                            this.game.bullets.push(new Bullet(this.x, this.y, a, 1.2 + r*0.5, true));
+                        }
+                    }
+                    this.game.sound.enemyShoot();
+                }
+                // Двойная веерная атака с двух сторон
+                if (this.timer % 50 === 0) {
+                    const base = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
+                    for (let i = -4; i <= 4; i++) {
+                        this.game.bullets.push(new Bullet(this.x-20, this.y+10, base + i*0.2, 2.8, true));
+                        this.game.bullets.push(new Bullet(this.x+20, this.y+10, base + i*0.2, 2.8, true));
+                    }
+                    this.game.sound.enemyShoot();
+                }
+                // Круговая волна
+                if (this.timer % 70 === 0) {
+                    for (let i = 0; i < 24; i++) {
+                        const a = (Math.PI*2/24)*i;
+                        this.game.bullets.push(new Bullet(this.x, this.y, a, 2.2, true));
+                    }
+                    this.game.sound.enemyShoot();
+                }
+                break;
         }
     }
 
     draw(ctx) {
         ctx.save();
         
-        // Основа босса (градиент)
-        const gradient = ctx.createRadialGradient(this.x, this.y, 10, this.x, this.y, this.radius);
-        gradient.addColorStop(0, '#ff0000');
-        gradient.addColorStop(0.5, '#ff0023');
-        gradient.addColorStop(1, '#660000');
-        
-        ctx.fillStyle = gradient;
-        ctx.shadowBlur = 20;
+        // Тёмный ореол
+        const glow = ctx.createRadialGradient(this.x, this.y, 20, this.x, this.y, 50);
+        glow.addColorStop(0, 'rgba(255,0,35,0.4)');
+        glow.addColorStop(1, 'rgba(255,0,35,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 50, 0, Math.PI*2);
+        ctx.fill();
+
+        // Основное тело
+        const grad = ctx.createRadialGradient(this.x, this.y, 10, this.x, this.y, 40);
+        grad.addColorStop(0, '#ff0000');
+        grad.addColorStop(0.4, '#ff0023');
+        grad.addColorStop(1, '#4a0010');
+        ctx.fillStyle = grad;
+        ctx.shadowBlur = 25;
         ctx.shadowColor = '#ff0023';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, 40, 0, Math.PI*2);
         ctx.fill();
-        
+
         // Глаза
         ctx.fillStyle = '#ffffff';
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 12;
         ctx.shadowColor = '#ffffff';
         ctx.beginPath();
-        ctx.arc(this.x - 15, this.y - 8, 8, 0, Math.PI * 2);
-        ctx.arc(this.x + 15, this.y - 8, 8, 0, Math.PI * 2);
+        ctx.arc(this.x-18, this.y-10, 10, 0, Math.PI*2);
+        ctx.arc(this.x+18, this.y-10, 10, 0, Math.PI*2);
         ctx.fill();
-        
         ctx.fillStyle = '#000000';
         ctx.shadowBlur = 0;
         ctx.beginPath();
-        ctx.arc(this.x - 15, this.y - 8, 4, 0, Math.PI * 2);
-        ctx.arc(this.x + 15, this.y - 8, 4, 0, Math.PI * 2);
+        ctx.arc(this.x-18, this.y-10, 5, 0, Math.PI*2);
+        ctx.arc(this.x+18, this.y-10, 5, 0, Math.PI*2);
         ctx.fill();
-        
+
         // Щупальца
         ctx.strokeStyle = '#ff0023';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 5;
         ctx.shadowBlur = 15;
         ctx.shadowColor = '#ff0023';
-        for (let i = 0; i < 4; i++) {
-            const baseAngle = Math.PI/2 + (i - 1.5) * 0.4;
-            const wiggle = Math.sin(this.timer * 0.15 + i) * 20;
+        for (let i = 0; i < 6; i++) {
+            const ba = Math.PI/2 + (i-2.5)*0.25;
+            const wiggle = Math.sin(this.timer*0.08 + i)*18;
             ctx.beginPath();
-            ctx.moveTo(this.x + Math.cos(baseAngle) * 25, this.y + Math.sin(baseAngle) * 25);
+            ctx.moveTo(this.x+Math.cos(ba)*30, this.y+Math.sin(ba)*30);
             ctx.lineTo(
-                this.x + Math.cos(baseAngle) * 55 + wiggle * Math.cos(baseAngle + Math.PI/2),
-                this.y + Math.sin(baseAngle) * 55 + wiggle * Math.sin(baseAngle + Math.PI/2)
+                this.x+Math.cos(ba)*60 + wiggle*Math.cos(ba+Math.PI/2),
+                this.y+Math.sin(ba)*60 + wiggle*Math.sin(ba+Math.PI/2)
             );
             ctx.stroke();
         }
         
         // Полоска здоровья
-        const barWidth = 300;
-        const barHeight = 10;
-        const barX = 50;
-        const barY = 10;
-        
-        ctx.fillStyle = '#333333';
+        const bw = 300, bh = 10;
+        ctx.fillStyle = '#222';
         ctx.shadowBlur = 0;
-        ctx.fillRect(barX, barY, barWidth, barHeight);
-        
-        const healthGradient = ctx.createLinearGradient(barX, 0, barX + barWidth, 0);
-        healthGradient.addColorStop(0, '#ff0000');
-        healthGradient.addColorStop(0.5, '#ffff00');
-        healthGradient.addColorStop(1, '#00ff00');
-        
-        ctx.fillStyle = healthGradient;
-        ctx.fillRect(barX, barY, barWidth * (this.health / this.maxHealth), barHeight);
-        
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(barX, barY, barWidth, barHeight);
-        
-        // Текст фазы
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 14px "Unbounded", Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText(`Фаза ${this.phase}`, barX, barY + 30);
-        ctx.textAlign = 'start';
-        
-        ctx.restore();
-    }
+        ctx.fillRect(50, 10, bw, bh);
+        const hg = ctx.createLinearGradient(50,0,350,0);
+        hg.addColorStop(0,'#ff0000'); hg.addColorStop(0.5,'#ffff00'); hg.addColorStop(1,'#00ff00');
+        ctx.fillStyle = hg;
+        ctx.fillRect(50,10, bw*(this.health/this.maxHealth), bh);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth=2; ctx.strokeRect(50,10,bw,bh);
 
-    hit(damage = 1) {
-        this.health -= damage;
-        return this.health <= 0;
-    }
-                } 
-
-    draw(ctx) {
-        ctx.save();
-        
-        const gradient = ctx.createRadialGradient(this.x, this.y, 10, this.x, this.y, 35);
-        gradient.addColorStop(0, '#ff0000');
-        gradient.addColorStop(0.5, '#ff0023');
-        gradient.addColorStop(1, '#660000');
-        
-        ctx.fillStyle = gradient;
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = '#ff0023';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 35, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.fillStyle = '#ffffff';
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(this.x - 15, this.y - 8, 8, 0, Math.PI * 2);
-        ctx.arc(this.x + 15, this.y - 8, 8, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.fillStyle = '#000000';
-        ctx.shadowBlur = 0;
-        ctx.beginPath();
-        ctx.arc(this.x - 15, this.y - 8, 4, 0, Math.PI * 2);
-        ctx.arc(this.x + 15, this.y - 8, 4, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.strokeStyle = '#ff0023';
-        ctx.lineWidth = 4;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#ff0023';
-        for (let i = 0; i < 4; i++) {
-            const baseAngle = Math.PI/2 + (i - 1.5) * 0.3;
-            const wiggle = Math.sin(this.timer * 0.1 + i) * 15;
-            ctx.beginPath();
-            ctx.moveTo(this.x + Math.cos(baseAngle) * 25, this.y + Math.sin(baseAngle) * 25);
-            ctx.lineTo(
-                this.x + Math.cos(baseAngle) * 50 + wiggle * Math.cos(baseAngle + Math.PI/2),
-                this.y + Math.sin(baseAngle) * 50 + wiggle * Math.sin(baseAngle + Math.PI/2)
-            );
-            ctx.stroke();
-        }
-        
-        const barWidth = 300;
-        const barHeight = 8;
-        ctx.fillStyle = '#333333';
-        ctx.shadowBlur = 0;
-        ctx.fillRect(50, 10, barWidth, barHeight);
-        
-        const healthGradient = ctx.createLinearGradient(50, 0, 350, 0);
-        healthGradient.addColorStop(0, '#ff0000');
-        healthGradient.addColorStop(0.5, '#ffff00');
-        healthGradient.addColorStop(0.8, '#00ff00');
-        
-        ctx.fillStyle = healthGradient;
-        ctx.fillRect(50, 10, barWidth * (this.health / this.maxHealth), barHeight);
-        
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(50, 10, barWidth, barHeight);
-        
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = '#fff';
         ctx.font = 'bold 12px "Unbounded", Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText(`Фаза ${this.phase}`, 50, 40);
-        ctx.textAlign = 'start';
-        
+        ctx.textAlign='left';
+        ctx.fillText(`Фаза ${this.phase}`, 50, 38);
+
         ctx.restore();
     }
 
@@ -686,7 +557,6 @@ class Game {
         this.countdownTimer = 0;
         this.countdownText = '';
 
-        // Кэш позиций иконок бомб для проверки нажатий
         this.bombIconPositions = [];
 
         this.lastTime = 0;
@@ -836,12 +706,11 @@ class Game {
         document.getElementById('mobileControls').classList.toggle('hidden', !this.isMobile);
     }
 
-    // Проверка, попал ли тап в иконку бомбы
     isTapOnBomb(tx, ty) {
         for (let pos of this.bombIconPositions) {
             if (tx >= pos.x && tx <= pos.x + pos.size &&
                 ty >= pos.y && ty <= pos.y + pos.size) {
-                return pos.index; // возвращаем индекс бомбы
+                return pos.index;
             }
         }
         return -1;
@@ -881,17 +750,14 @@ class Game {
             const tx = (touch.clientX - rect.left) * scaleX;
             const ty = (touch.clientY - rect.top) * scaleY;
             
-            // Проверяем, не нажата ли иконка бомбы (только на мобильных)
             if (this.isMobile) {
                 const bombIndex = this.isTapOnBomb(tx, ty);
                 if (bombIndex !== -1) {
-                    // Нажата иконка бомбы — активируем бомбу
                     this.useBomb();
                     return;
                 }
             }
             
-            // Обычное управление
             if (touches.length === 1) {
                 this.touchStartTime = Date.now();
                 this.touchStartPos = { x: tx, y: ty };
@@ -913,7 +779,6 @@ class Game {
                 return;
             }
             
-            // Короткий тап — бомба (старый метод, оставлен для совместимости)
             if (this.touchStartFingers === 1 && this.touchStartPos) {
                 const dt = Date.now() - this.touchStartTime;
                 const dx = Math.abs(this.mouseX - this.touchStartPos.x);
@@ -1169,11 +1034,7 @@ class Game {
         }
     }
 
-    // --------------------------------------------------------
-    //  UI
-    // --------------------------------------------------------
     drawUI() {
-        // Очищаем кэш позиций бомб
         this.bombIconPositions = [];
 
         const UI = {
@@ -1201,15 +1062,12 @@ class Game {
                 color: '#d9d9d9'
             },
 
-            // Бомбы: разное расположение для ПК и мобильных
             bombs: this.isMobile ? {
-                // Мобильная версия: вертикально справа посередине
                 startX: 370,
-                startY: 270,   // Центр экрана 300 - половина высоты 3 иконок
-                gap: 8,        // вертикальный промежуток
+                startY: 270,
+                gap: 8,
                 size: 24
             } : {
-                // ПК версия: горизонтально внизу по центру
                 startX: 140,
                 startY: 568,
                 gap: 15,
@@ -1220,7 +1078,6 @@ class Game {
         const ctx = this.ctx;
         ctx.save();
 
-        // --- плашка ---
         if (this.uiPanel && this.uiPanel.complete && this.uiPanel.naturalWidth > 0) {
             ctx.drawImage(this.uiPanel, 0, UI.panelY, 400, UI.panelHeight);
         } else {
@@ -1230,7 +1087,6 @@ class Game {
             ctx.strokeRect(0, UI.panelY, 400, UI.panelHeight);
         }
 
-        // --- жизни ---
         const lv = UI.lives;
         for (let i = 0; i < 2; i++) {
             const x = lv.x + i * (lv.size + lv.gap);
@@ -1246,28 +1102,23 @@ class Game {
             }
         }
 
-        // --- очки ---
         ctx.font = `${UI.score.size}px "Unbounded", "Unbounded Medium", Arial`;
         ctx.fillStyle = UI.score.color;
         ctx.textAlign = 'right';
         ctx.fillText(`${this.player.score}`, UI.score.x, UI.panelY + UI.score.y);
 
-        // --- волна ---
         ctx.font = `${UI.wave.size}px "Unbounded", "Unbounded Medium", Arial`;
         ctx.fillStyle = UI.wave.color;
         ctx.fillText(`Волна ${this.wave}`, UI.wave.x, UI.panelY + UI.wave.y);
         ctx.textAlign = 'left';
 
-        // --- бомбы ---
         const bv = UI.bombs;
         if (this.isMobile) {
-            // Вертикальное расположение (мобильные)
             for (let i = 0; i < 3; i++) {
                 const x = bv.startX;
                 const y = bv.startY + i * (bv.size + bv.gap);
                 const img = i < this.player.bombs ? this.bombFull : this.bombEmpty;
                 
-                // Сохраняем позицию для проверки нажатий
                 this.bombIconPositions.push({ x, y, size: bv.size, index: i });
                 
                 if (img && img.complete && img.naturalWidth > 0) {
@@ -1280,13 +1131,11 @@ class Game {
                 }
             }
         } else {
-            // Горизонтальное расположение (ПК)
             for (let i = 0; i < 3; i++) {
                 const x = bv.startX + i * (bv.size + bv.gap);
                 const y = bv.startY;
                 const img = i < this.player.bombs ? this.bombFull : this.bombEmpty;
                 
-                // Сохраняем позицию для проверки нажатий
                 this.bombIconPositions.push({ x, y, size: bv.size, index: i });
                 
                 if (img && img.complete && img.naturalWidth > 0) {
@@ -1302,8 +1151,6 @@ class Game {
 
         ctx.restore();
     }
-
-    // --------------------------------------------------------
 
     draw() {
         if (this.bgImage.complete && this.bgImage.naturalWidth > 0) {
