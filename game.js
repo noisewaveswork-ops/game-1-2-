@@ -171,7 +171,7 @@ class Bullet {
         this.y = y;
         this.angle = angle;
         this.speed = speed;
-        this.width = isEnemy ? 5 : 14;      // для игрока: 14x6 (повёрнут на 90°)
+        this.width = isEnemy ? 5 : 14;
         this.height = isEnemy ? 5 : 6;
         this.isEnemy = isEnemy;
         this.color = isEnemy ? '#ff0023' : '#d9d9d9';
@@ -186,7 +186,7 @@ class Bullet {
     draw(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);
-        ctx.rotate(this.angle + Math.PI/2);  // поворот на 90 градусов
+        ctx.rotate(this.angle + Math.PI/2);
         ctx.fillStyle = this.color;
         ctx.shadowBlur = this.isEnemy ? 8 : 6;
         ctx.shadowColor = this.color;
@@ -203,7 +203,7 @@ class HomingBullet extends Bullet {
     constructor(x, y, game) {
         super(x, y, -Math.PI / 2, 6, false);
         this.game = game;
-        this.color = '#d9d9d9';  // цвет как у обычных пуль
+        this.color = '#d9d9d9';
         this.width = 14;
         this.height = 6;
         this.damage = 0.4;
@@ -211,11 +211,9 @@ class HomingBullet extends Bullet {
     }
 
     update() {
-        // Ищем ближайшую цель: врагов И босса
         let closestTarget = null;
         let closestDist = Infinity;
         
-        // Проверяем обычных врагов
         for (let enemy of this.game.enemies) {
             const dx = enemy.x - this.x;
             const dy = enemy.y - this.y;
@@ -226,7 +224,6 @@ class HomingBullet extends Bullet {
             }
         }
         
-        // Проверяем босса
         if (this.game.boss) {
             const dx = this.game.boss.x - this.x;
             const dy = this.game.boss.y - this.y;
@@ -268,7 +265,7 @@ class Enemy {
 
     draw(ctx) {
         ctx.save();
-        ctx.fillStyle = '#ff0023';  // новый цвет врагов
+        ctx.fillStyle = '#ff0023';
         ctx.shadowBlur = 10;
         ctx.shadowColor = '#ff0023';
         ctx.beginPath();
@@ -304,8 +301,8 @@ class Boss {
         this.entered = false;
         this.targetY = 80;
         this.points = 5000;
-        this.xDirection = 1;  // направление движения
-        this.xSpeed = 1.2;   // скорость горизонтального движения
+        this.xDirection = 1;
+        this.xSpeed = 1.2;
     }
 
     update() {
@@ -339,11 +336,9 @@ class Boss {
             }
         }
 
-        // Движение из стороны в сторону чётко по центру (y фиксирован)
-        this.y = this.targetY;  // фиксируем Y
+        this.y = this.targetY;
         this.x += this.xSpeed * this.xDirection;
         
-        // Границы движения: от 60 до 340 (чтобы не улетал за экран)
         if (this.x >= 340) {
             this.x = 340;
             this.xDirection = -1;
@@ -352,7 +347,6 @@ class Boss {
             this.xDirection = 1;
         }
 
-        // Атаки по фазам (те же, что и раньше)
         switch(this.phase) {
             case 1:
                 if (this.timer % 60 === 0) {
@@ -423,7 +417,7 @@ class Boss {
         
         const gradient = ctx.createRadialGradient(this.x, this.y, 10, this.x, this.y, 35);
         gradient.addColorStop(0, '#ff0000');
-        gradient.addColorStop(0.5, '#ff0023');  // новый цвет
+        gradient.addColorStop(0.5, '#ff0023');
         gradient.addColorStop(1, '#660000');
         
         ctx.fillStyle = gradient;
@@ -511,17 +505,14 @@ class Game {
         this.sound = new SoundManager();
         this.gameStarted = false;
 
-        // Скроллящийся фон
         this.bgImage = new Image();
         this.bgImage.src = 'assets/background.png';
         this.bgY = 0;
         this.bgSpeed = 5;
 
-        // Изображение игрока
         this.playerImage = new Image();
         this.playerImage.src = 'assets/player.png';
 
-        // Иконки UI
         this.heartFull = new Image();
         this.heartFull.src = 'assets/heart_full.png';
         this.heartEmpty = new Image();
@@ -531,7 +522,6 @@ class Game {
         this.bombEmpty = new Image();
         this.bombEmpty.src = 'assets/bomb_empty.png';
         
-        // UI плашка
         this.uiPanel = new Image();
         this.uiPanel.src = 'assets/ui.png';
 
@@ -563,7 +553,9 @@ class Game {
         this.countdownTimer = 0;
         this.countdownText = '';
 
-        // Фиксированный временной шаг
+        // Кэш позиций иконок бомб для проверки нажатий
+        this.bombIconPositions = [];
+
         this.lastTime = 0;
         this.accumulator = 0;
         this.fixedDelta = 1000 / 60;
@@ -579,7 +571,6 @@ class Game {
                 health: 2, points: 100,
                 update: (enemy) => {
                     enemy.y += 1.8;
-                    // Перестаёт стрелять в нижней четверти (y > 450)
                     if (enemy.y < 450 && enemy.timer % 75 === 0) {
                         const angle = Math.atan2(this.player.y - enemy.y, this.player.x - enemy.x);
                         this.bullets.push(new Bullet(enemy.x, enemy.y, angle, 2.5, true));
@@ -665,7 +656,6 @@ class Game {
             queue.push({ type: 'spiral', x: 280, y: -40, delay: 45 });
             queue.push({ type: 'sideSweeper', x: -20, y: 200, delay: 70 });
         }
-        // Волна 10 — босс, спавнится отдельно
         
         return queue;
     }
@@ -674,7 +664,6 @@ class Game {
         this.wave++;
         this.waveStep = 0;
         
-        // Ограничение: максимум 10 волн, где 10 — босс
         if (this.wave >= 10) {
             this.wave = 10;
             this.spawnBoss();
@@ -714,6 +703,17 @@ class Game {
         document.getElementById('mobileControls').classList.toggle('hidden', !this.isMobile);
     }
 
+    // Проверка, попал ли тап в иконку бомбы
+    isTapOnBomb(tx, ty) {
+        for (let pos of this.bombIconPositions) {
+            if (tx >= pos.x && tx <= pos.x + pos.size &&
+                ty >= pos.y && ty <= pos.y + pos.size) {
+                return pos.index; // возвращаем индекс бомбы
+            }
+        }
+        return -1;
+    }
+
     setupEventListeners() {
         this.canvas.addEventListener('mousemove', (e) => {
             if (this.isMobile) return;
@@ -736,19 +736,32 @@ class Game {
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (!this.gameRunning || this.gameOver || this.gameComplete) return;
+            
             const touches = e.touches;
             this.twoFingers = touches.length >= 2;
             this.touchStartFingers = touches.length;
+            
+            const rect = this.canvas.getBoundingClientRect();
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            const touch = touches[0];
+            const tx = (touch.clientX - rect.left) * scaleX;
+            const ty = (touch.clientY - rect.top) * scaleY;
+            
+            // Проверяем, не нажата ли иконка бомбы (только на мобильных)
+            if (this.isMobile) {
+                const bombIndex = this.isTapOnBomb(tx, ty);
+                if (bombIndex !== -1) {
+                    // Нажата иконка бомбы — активируем бомбу
+                    this.useBomb();
+                    return;
+                }
+            }
+            
+            // Обычное управление
             if (touches.length === 1) {
                 this.touchStartTime = Date.now();
-                const rect = this.canvas.getBoundingClientRect();
-                const scaleX = this.canvas.width / rect.width;
-                const scaleY = this.canvas.height / rect.height;
-                const touch = touches[0];
-                this.touchStartPos = {
-                    x: (touch.clientX - rect.left) * scaleX,
-                    y: (touch.clientY - rect.top) * scaleY
-                };
+                this.touchStartPos = { x: tx, y: ty };
             }
             this.updateMobilePosition(touches);
         }, { passive: false });
@@ -766,12 +779,15 @@ class Game {
                 this.twoFingers = false;
                 return;
             }
+            
+            // Короткий тап — бомба (старый метод, оставлен для совместимости)
             if (this.touchStartFingers === 1 && this.touchStartPos) {
                 const dt = Date.now() - this.touchStartTime;
                 const dx = Math.abs(this.mouseX - this.touchStartPos.x);
                 const dy = Math.abs(this.mouseY - this.touchStartPos.y);
                 if (dt < 300 && dx < 20 && dy < 20) this.useBomb();
             }
+            
             this.twoFingers = e.touches.length >= 2;
             if (e.touches.length > 0) this.updateMobilePosition(e.touches);
             this.touchStartPos = null;
@@ -865,7 +881,7 @@ class Game {
         document.getElementById('finalScore').textContent = `Победа! Счёт: ${this.player.score}`;
         document.getElementById('gameOver').classList.remove('hidden');
         document.querySelector('#gameOver h2').textContent = 'Поздравляем!';
-        document.querySelector('#gameOver h2').style.color = '#7ab6ff';  // синий цвет
+        document.querySelector('#gameOver h2').style.color = '#7ab6ff';
         this.sound.waveStart();
         
         if (this.bgmElement) {
@@ -895,7 +911,6 @@ class Game {
 
         this.gameTimer++;
 
-        // Автоспавн босса на 10-й волне
         if (!this.bossSpawned && this.wave >= 10) {
             this.spawnBoss();
         }
@@ -928,7 +943,6 @@ class Game {
         this.bullets = this.bullets.filter(b => !b.isOffScreen());
 
         this.enemies.forEach(e => e.update());
-        // Враги исчезают, как только полностью пересекают нижнюю границу (y > 600)
         this.enemies = this.enemies.filter(e => e.y < 600);
         
         if (!this.bossSpawned) {
@@ -1023,9 +1037,12 @@ class Game {
     }
 
     // --------------------------------------------------------
-    //  UI  –  все координаты можно менять здесь
+    //  UI
     // --------------------------------------------------------
     drawUI() {
+        // Очищаем кэш позиций бомб
+        this.bombIconPositions = [];
+
         const UI = {
             panelY: 0,
             panelHeight: 600,
@@ -1051,11 +1068,17 @@ class Game {
                 color: '#d9d9d9'
             },
 
-            bombs: {
-                // Центрирование: 3 иконки по 30px + 2 промежутка по 15px = 120px
-                // Центр экрана = 200px, начало = 200 - 60 = 140px
+            // Бомбы: разное расположение для ПК и мобильных
+            bombs: this.isMobile ? {
+                // Мобильная версия: вертикально справа посередине
+                startX: 370,
+                startY: 270,   // Центр экрана 300 - половина высоты 3 иконок
+                gap: 8,        // вертикальный промежуток
+                size: 24
+            } : {
+                // ПК версия: горизонтально внизу по центру
                 startX: 140,
-                y: 568,
+                startY: 568,
                 gap: 15,
                 size: 30
             }
@@ -1102,19 +1125,45 @@ class Game {
         ctx.fillText(`Волна ${this.wave}`, UI.wave.x, UI.panelY + UI.wave.y);
         ctx.textAlign = 'left';
 
-        // --- бомбы (по центру) ---
+        // --- бомбы ---
         const bv = UI.bombs;
-        for (let i = 0; i < 3; i++) {
-            const x = bv.startX + i * (bv.size + bv.gap);
-            const y = bv.y;
-            const img = i < this.player.bombs ? this.bombFull : this.bombEmpty;
-            if (img && img.complete && img.naturalWidth > 0) {
-                ctx.drawImage(img, x, y, bv.size, bv.size);
-            } else {
-                ctx.fillStyle = i < this.player.bombs ? '#ffaa00' : '#555';
-                ctx.beginPath();
-                ctx.arc(x + 15, y + 15, 15, 0, 2 * Math.PI);
-                ctx.fill();
+        if (this.isMobile) {
+            // Вертикальное расположение (мобильные)
+            for (let i = 0; i < 3; i++) {
+                const x = bv.startX;
+                const y = bv.startY + i * (bv.size + bv.gap);
+                const img = i < this.player.bombs ? this.bombFull : this.bombEmpty;
+                
+                // Сохраняем позицию для проверки нажатий
+                this.bombIconPositions.push({ x, y, size: bv.size, index: i });
+                
+                if (img && img.complete && img.naturalWidth > 0) {
+                    ctx.drawImage(img, x, y, bv.size, bv.size);
+                } else {
+                    ctx.fillStyle = i < this.player.bombs ? '#ffaa00' : '#555';
+                    ctx.beginPath();
+                    ctx.arc(x + bv.size/2, y + bv.size/2, bv.size/2, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            }
+        } else {
+            // Горизонтальное расположение (ПК)
+            for (let i = 0; i < 3; i++) {
+                const x = bv.startX + i * (bv.size + bv.gap);
+                const y = bv.startY;
+                const img = i < this.player.bombs ? this.bombFull : this.bombEmpty;
+                
+                // Сохраняем позицию для проверки нажатий
+                this.bombIconPositions.push({ x, y, size: bv.size, index: i });
+                
+                if (img && img.complete && img.naturalWidth > 0) {
+                    ctx.drawImage(img, x, y, bv.size, bv.size);
+                } else {
+                    ctx.fillStyle = i < this.player.bombs ? '#ffaa00' : '#555';
+                    ctx.beginPath();
+                    ctx.arc(x + bv.size/2, y + bv.size/2, bv.size/2, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
             }
         }
 
@@ -1136,15 +1185,12 @@ class Game {
         this.enemies.forEach(e => e.draw(this.ctx));
         if (this.boss) this.boss.draw(this.ctx);
         
-        // Пули игрока (под спрайтом игрока)
         this.bullets.forEach(b => {
             if (!b.isEnemy) b.draw(this.ctx);
         });
         
-        // Спрайт игрока
         this.player.draw(this.ctx);
         
-        // Вражеские пули (над игроком)
         this.bullets.forEach(b => {
             if (b.isEnemy) b.draw(this.ctx);
         });
