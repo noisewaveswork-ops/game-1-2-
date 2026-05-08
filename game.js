@@ -132,14 +132,14 @@ class Player {
             }
         }
 
-        // Хитбокс (точка)
-        ctx.fillStyle = '#ffffff';
+        // Хитбокс (точка) - цвет #7ab6ff
+        ctx.fillStyle = '#7ab6ff';
         ctx.shadowBlur = 12;
-        ctx.shadowColor = '#ff0000';
+        ctx.shadowColor = '#7ab6ff';
         ctx.beginPath();
         ctx.arc(this.x, this.y, 5, 0, 2 * Math.PI);
         ctx.fill();
-        ctx.strokeStyle = '#ff0000';
+        ctx.strokeStyle = '#7ab6ff';
         ctx.lineWidth = 2.5;
         ctx.shadowBlur = 0;
         ctx.stroke();
@@ -171,10 +171,10 @@ class Bullet {
         this.y = y;
         this.angle = angle;
         this.speed = speed;
-        this.width = isEnemy ? 5 : 6;      // ширина прямоугольника
-        this.height = isEnemy ? 5 : 14;    // высота прямоугольника
+        this.width = isEnemy ? 5 : 14;      // для игрока: 14x6 (повёрнут на 90°)
+        this.height = isEnemy ? 5 : 6;
         this.isEnemy = isEnemy;
-        this.color = isEnemy ? '#ff4444' : '#d9d9d9';
+        this.color = isEnemy ? '#ff0023' : '#d9d9d9';
         this.damage = 1;
     }
 
@@ -186,7 +186,7 @@ class Bullet {
     draw(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);
-        ctx.rotate(this.angle);
+        ctx.rotate(this.angle + Math.PI/2);  // поворот на 90 градусов
         ctx.fillStyle = this.color;
         ctx.shadowBlur = this.isEnemy ? 8 : 6;
         ctx.shadowColor = this.color;
@@ -203,28 +203,42 @@ class HomingBullet extends Bullet {
     constructor(x, y, game) {
         super(x, y, -Math.PI / 2, 6, false);
         this.game = game;
-        this.color = '#ff44ff';
-        this.width = 6;
-        this.height = 14;
+        this.color = '#d9d9d9';  // цвет как у обычных пуль
+        this.width = 14;
+        this.height = 6;
         this.damage = 0.4;
         this.turnSpeed = 0.08;
     }
 
     update() {
-        const enemies = this.game.enemies;
-        let closestEnemy = null;
+        // Ищем ближайшую цель: врагов И босса
+        let closestTarget = null;
         let closestDist = Infinity;
-        for (let enemy of enemies) {
+        
+        // Проверяем обычных врагов
+        for (let enemy of this.game.enemies) {
             const dx = enemy.x - this.x;
             const dy = enemy.y - this.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < closestDist) {
                 closestDist = dist;
-                closestEnemy = enemy;
+                closestTarget = enemy;
             }
         }
-        if (closestEnemy) {
-            const desiredAngle = Math.atan2(closestEnemy.y - this.y, closestEnemy.x - this.x);
+        
+        // Проверяем босса
+        if (this.game.boss) {
+            const dx = this.game.boss.x - this.x;
+            const dy = this.game.boss.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < closestDist) {
+                closestDist = dist;
+                closestTarget = this.game.boss;
+            }
+        }
+        
+        if (closestTarget) {
+            const desiredAngle = Math.atan2(closestTarget.y - this.y, closestTarget.x - this.x);
             let angleDiff = desiredAngle - this.angle;
             while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
             while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
@@ -254,9 +268,9 @@ class Enemy {
 
     draw(ctx) {
         ctx.save();
-        ctx.fillStyle = '#ff3366';
+        ctx.fillStyle = '#ff0023';  // новый цвет врагов
         ctx.shadowBlur = 10;
-        ctx.shadowColor = '#ff3366';
+        ctx.shadowColor = '#ff0023';
         ctx.beginPath();
         ctx.arc(this.x, this.y, 14, 0, Math.PI * 2);
         ctx.fill();
@@ -290,6 +304,8 @@ class Boss {
         this.entered = false;
         this.targetY = 80;
         this.points = 5000;
+        this.xDirection = 1;  // направление движения
+        this.xSpeed = 1.2;   // скорость горизонтального движения
     }
 
     update() {
@@ -323,18 +339,30 @@ class Boss {
             }
         }
 
-        this.x += Math.sin(this.timer * 0.02) * 2;
+        // Движение из стороны в сторону чётко по центру (y фиксирован)
+        this.y = this.targetY;  // фиксируем Y
+        this.x += this.xSpeed * this.xDirection;
+        
+        // Границы движения: от 60 до 340 (чтобы не улетал за экран)
+        if (this.x >= 340) {
+            this.x = 340;
+            this.xDirection = -1;
+        } else if (this.x <= 60) {
+            this.x = 60;
+            this.xDirection = 1;
+        }
 
+        // Атаки по фазам (те же, что и раньше)
         switch(this.phase) {
             case 1:
-                if (this.timer % 60 === 0) {  // было 50
+                if (this.timer % 60 === 0) {
                     const baseAngle = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
                     for (let i = -2; i <= 2; i++) {
                         this.game.bullets.push(new Bullet(this.x, this.y + 20, baseAngle + i * 0.25, 2.5, true));
                     }
                     this.game.sound.enemyShoot();
                 }
-                if (this.timer % 85 === 0) {  // было 70
+                if (this.timer % 85 === 0) {
                     for (let i = 0; i < 8; i++) {
                         const angle = (Math.PI * 2 / 8) * i + this.timer * 0.02;
                         this.game.bullets.push(new Bullet(this.x, this.y, angle, 2, true));
@@ -343,14 +371,14 @@ class Boss {
                 }
                 break;
             case 2:
-                if (this.timer % 50 === 0) {  // было 40
+                if (this.timer % 50 === 0) {
                     for (let i = 0; i < 12; i++) {
                         const angle = (Math.PI * 2 / 12) * i + this.timer * 0.04;
                         this.game.bullets.push(new Bullet(this.x, this.y, angle, 2.5, true));
                     }
                     this.game.sound.enemyShoot();
                 }
-                if (this.timer % 75 === 0) {  // было 60
+                if (this.timer % 75 === 0) {
                     for (let j = 0; j < 3; j++) {
                         setTimeout(() => {
                             if (this.health > 0) {
@@ -365,21 +393,21 @@ class Boss {
                 }
                 break;
             case 3:
-                if (this.timer % 40 === 0) {  // было 30
+                if (this.timer % 40 === 0) {
                     for (let i = 0; i < 16; i++) {
                         const angle = (Math.PI * 2 / 16) * i + this.timer * 0.06;
                         this.game.bullets.push(new Bullet(this.x, this.y, angle, 3, true));
                     }
                     this.game.sound.enemyShoot();
                 }
-                if (this.timer % 55 === 0) {  // было 45
+                if (this.timer % 55 === 0) {
                     const baseAngle = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
                     for (let i = -3; i <= 3; i++) {
                         this.game.bullets.push(new Bullet(this.x, this.y + 25, baseAngle + i * 0.3, 4, true));
                     }
                     this.game.sound.enemyShoot();
                 }
-                if (this.timer % 100 === 0) {  // было 80
+                if (this.timer % 100 === 0) {
                     for (let i = 0; i < 20; i++) {
                         const angle = (Math.PI * 2 / 20) * i;
                         this.game.bullets.push(new Bullet(this.x, this.y, angle, 2.8, true));
@@ -395,12 +423,12 @@ class Boss {
         
         const gradient = ctx.createRadialGradient(this.x, this.y, 10, this.x, this.y, 35);
         gradient.addColorStop(0, '#ff0000');
-        gradient.addColorStop(0.5, '#ff3366');
+        gradient.addColorStop(0.5, '#ff0023');  // новый цвет
         gradient.addColorStop(1, '#660000');
         
         ctx.fillStyle = gradient;
         ctx.shadowBlur = 20;
-        ctx.shadowColor = '#ff0000';
+        ctx.shadowColor = '#ff0023';
         ctx.beginPath();
         ctx.arc(this.x, this.y, 35, 0, Math.PI * 2);
         ctx.fill();
@@ -420,10 +448,10 @@ class Boss {
         ctx.arc(this.x + 15, this.y - 8, 4, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.strokeStyle = '#ff0000';
+        ctx.strokeStyle = '#ff0023';
         ctx.lineWidth = 4;
         ctx.shadowBlur = 15;
-        ctx.shadowColor = '#ff0000';
+        ctx.shadowColor = '#ff0023';
         for (let i = 0; i < 4; i++) {
             const baseAngle = Math.PI/2 + (i - 1.5) * 0.3;
             const wiggle = Math.sin(this.timer * 0.1 + i) * 15;
@@ -547,25 +575,24 @@ class Game {
 
     defineWavePatterns() {
         this.patterns = {
-            // Простой враг: летит вниз, редко стреляет одиночной прицельной пулей
             straightShooter: {
                 health: 2, points: 100,
                 update: (enemy) => {
-                    enemy.y += 1.8;  // медленнее
-                    if (enemy.timer % 75 === 0) {  // реже стреляет
+                    enemy.y += 1.8;
+                    // Перестаёт стрелять в нижней четверти (y > 450)
+                    if (enemy.y < 450 && enemy.timer % 75 === 0) {
                         const angle = Math.atan2(this.player.y - enemy.y, this.player.x - enemy.x);
                         this.bullets.push(new Bullet(enemy.x, enemy.y, angle, 2.5, true));
                         this.sound.enemyShoot();
                     }
                 }
             },
-            // Синусоида + веер из трёх пуль
             sineFan: {
                 health: 3, points: 150,
                 update: (enemy) => {
                     enemy.y += 1.5;
                     enemy.x += Math.sin(enemy.timer * 0.04) * 2.5;
-                    if (enemy.timer % 65 === 0) {  // реже
+                    if (enemy.y < 450 && enemy.timer % 65 === 0) {
                         const baseAngle = Math.atan2(this.player.y - enemy.y, this.player.x - enemy.x);
                         for (let i = -1; i <= 1; i++) {
                             this.bullets.push(new Bullet(enemy.x, enemy.y, baseAngle + i * 0.3, 3, true));
@@ -574,12 +601,11 @@ class Game {
                     }
                 }
             },
-            // Спираль (медленная, 6 лучей)
             spiral: {
                 health: 4, points: 200,
                 update: (enemy) => {
-                    enemy.y += 1.0;  // медленнее
-                    if (enemy.timer % 55 === 0) {  // реже
+                    enemy.y += 1.0;
+                    if (enemy.y < 450 && enemy.timer % 55 === 0) {
                         for (let i = 0; i < 6; i++) {
                             const angle = (Math.PI * 2 / 6) * i + enemy.timer * 0.04;
                             this.bullets.push(new Bullet(enemy.x, enemy.y, angle, 2.2, true));
@@ -588,19 +614,18 @@ class Game {
                     }
                 }
             },
-            // Заход сбоку
             sideSweeper: {
                 health: 4, points: 180,
                 update: (enemy) => {
                     if (!enemy.initialized) {
                         enemy.initialized = true;
-                        enemy.xSpeed = (enemy.x < 200) ? 1.2 : -1.2;  // медленнее
+                        enemy.xSpeed = (enemy.x < 200) ? 1.2 : -1.2;
                     }
                     enemy.x += enemy.xSpeed;
                     enemy.y += 1.3;
-                    if (enemy.timer % 60 === 0) {  // реже
+                    if (enemy.y < 450 && enemy.timer % 60 === 0) {
                         const angle = Math.atan2(this.player.y - enemy.y, this.player.x - enemy.x);
-                        for (let j = 0; j < 2; j++) {  // меньше пуль в очереди
+                        for (let j = 0; j < 2; j++) {
                             setTimeout(() => {
                                 if (enemy.health > 0) {
                                     this.bullets.push(new Bullet(enemy.x, enemy.y, angle, 3.5, true));
@@ -617,55 +642,45 @@ class Game {
     buildWave(waveNumber) {
         const queue = [];
         
-        // Структурированные волны
         if (waveNumber <= 2) {
-            // Волны 1-2: 4 прямых врага, равномерно
             for (let i = 0; i < 4; i++) {
                 queue.push({ type: 'straightShooter', x: 80 + i * 80, y: -30, delay: i * 35 });
             }
         } else if (waveNumber <= 4) {
-            // Волны 3-4: 3 прямых + 1 синусоида
             for (let i = 0; i < 3; i++) {
                 queue.push({ type: 'straightShooter', x: 60 + i * 120, y: -30, delay: i * 30 });
             }
             queue.push({ type: 'sineFan', x: 200, y: -50, delay: 80 });
         } else if (waveNumber <= 6) {
-            // Волны 5-6: 2 прямых + 1 спираль + 1 синусоида
             queue.push({ type: 'straightShooter', x: 100, y: -30, delay: 0 });
             queue.push({ type: 'straightShooter', x: 300, y: -30, delay: 30 });
             queue.push({ type: 'spiral', x: 200, y: -40, delay: 60 });
             queue.push({ type: 'sineFan', x: 280, y: -60, delay: 90 });
         } else if (waveNumber <= 8) {
-            // Волны 7-8: заходы сбоку + спирали
             queue.push({ type: 'sideSweeper', x: -20, y: 100, delay: 25 });
             queue.push({ type: 'sideSweeper', x: 420, y: 150, delay: 55 });
             queue.push({ type: 'spiral', x: 200, y: -40, delay: 85 });
         } else if (waveNumber === 9) {
-            // Волна 9: две спирали + заход сбоку
             queue.push({ type: 'spiral', x: 120, y: -40, delay: 0 });
             queue.push({ type: 'spiral', x: 280, y: -40, delay: 45 });
             queue.push({ type: 'sideSweeper', x: -20, y: 200, delay: 70 });
-        } else if (waveNumber === 10) {
-            // Волна 10: босс
-            // босс спавнится отдельно, здесь пусто
-        } else {
-            // Волны 11+: случайный набор, но структурированный
-            const types = ['straightShooter', 'sineFan', 'spiral', 'sideSweeper'];
-            const count = 3 + Math.floor(waveNumber / 3);  // меньше врагов
-            // Спавним группами по 2
-            for (let i = 0; i < count; i++) {
-                const type = types[Math.floor(Math.random() * types.length)];
-                const x = 70 + (i % 3) * 130;  // равномерное распределение
-                const y = -30 - (Math.floor(i / 3)) * 40;
-                queue.push({ type, x, y, delay: i * 25 });
-            }
         }
+        // Волна 10 — босс, спавнится отдельно
+        
         return queue;
     }
 
     nextWave() {
         this.wave++;
         this.waveStep = 0;
+        
+        // Ограничение: максимум 10 волн, где 10 — босс
+        if (this.wave >= 10) {
+            this.wave = 10;
+            this.spawnBoss();
+            return;
+        }
+        
         this.waveSpawnQueue = this.buildWave(this.wave);
         this.spawnTimer = 0;
         this.player.score += 200 * this.wave;
@@ -683,7 +698,7 @@ class Game {
         if (this.bossSpawned) return;
         
         if (this.waveSpawnQueue.length === 0) {
-            if (this.enemies.length === 0) this.nextWave();
+            if (this.enemies.length === 0 && this.wave < 10) this.nextWave();
             return;
         }
         while (this.waveSpawnQueue.length > 0 && this.spawnTimer >= this.waveSpawnQueue[0].delay) {
@@ -850,6 +865,7 @@ class Game {
         document.getElementById('finalScore').textContent = `Победа! Счёт: ${this.player.score}`;
         document.getElementById('gameOver').classList.remove('hidden');
         document.querySelector('#gameOver h2').textContent = 'Поздравляем!';
+        document.querySelector('#gameOver h2').style.color = '#7ab6ff';  // синий цвет
         this.sound.waveStart();
         
         if (this.bgmElement) {
@@ -878,18 +894,18 @@ class Game {
         this.bgY = (this.bgY + this.bgSpeed) % this.canvas.height;
 
         this.gameTimer++;
-        
-        if (!this.bossSpawned && this.gameTimer > 3600) {
+
+        // Автоспавн босса на 10-й волне
+        if (!this.bossSpawned && this.wave >= 10) {
             this.spawnBoss();
         }
 
         this.laserMode = this.laserKeyDown || this.twoFingers;
 
-        // ФИКСИРОВАННАЯ скорострельность для ВСЕХ устройств
         if (this.player.shootCooldown <= 0) {
             if (this.laserMode) {
                 this.bullets.push(new HomingBullet(this.player.x, this.player.y - 5, this));
-                this.player.shootCooldown = 12;  // чуть медленнее для самонаводящихся
+                this.player.shootCooldown = 12;
             } else {
                 this.bullets.push(new Bullet(this.player.x, this.player.y - 15, -Math.PI / 2, 9, false));
                 this.player.shootCooldown = 8;
@@ -912,7 +928,8 @@ class Game {
         this.bullets = this.bullets.filter(b => !b.isOffScreen());
 
         this.enemies.forEach(e => e.update());
-        this.enemies = this.enemies.filter(e => e.y < 620 + 20);
+        // Враги исчезают, как только полностью пересекают нижнюю границу (y > 600)
+        this.enemies = this.enemies.filter(e => e.y < 600);
         
         if (!this.bossSpawned) {
             this.spawnFromQueue();
@@ -920,7 +937,7 @@ class Game {
         
         this.checkCollisions();
 
-        if (!this.bossSpawned && this.enemies.length === 0 && this.waveSpawnQueue.length === 0) {
+        if (!this.bossSpawned && this.enemies.length === 0 && this.waveSpawnQueue.length === 0 && this.wave < 10) {
             this.nextWave();
         }
     }
@@ -1035,7 +1052,9 @@ class Game {
             },
 
             bombs: {
-                startX: 164,
+                // Центрирование: 3 иконки по 30px + 2 промежутка по 15px = 120px
+                // Центр экрана = 200px, начало = 200 - 60 = 140px
+                startX: 140,
                 y: 568,
                 gap: 15,
                 size: 30
@@ -1083,7 +1102,7 @@ class Game {
         ctx.fillText(`Волна ${this.wave}`, UI.wave.x, UI.panelY + UI.wave.y);
         ctx.textAlign = 'left';
 
-        // --- бомбы ---
+        // --- бомбы (по центру) ---
         const bv = UI.bombs;
         for (let i = 0; i < 3; i++) {
             const x = bv.startX + i * (bv.size + bv.gap);
@@ -1094,7 +1113,7 @@ class Game {
             } else {
                 ctx.fillStyle = i < this.player.bombs ? '#ffaa00' : '#555';
                 ctx.beginPath();
-                ctx.arc(x + 10, y + 10, 8, 0, 2 * Math.PI);
+                ctx.arc(x + 15, y + 15, 15, 0, 2 * Math.PI);
                 ctx.fill();
             }
         }
@@ -1105,7 +1124,6 @@ class Game {
     // --------------------------------------------------------
 
     draw() {
-        // Сначала рисуем фон
         if (this.bgImage.complete && this.bgImage.naturalWidth > 0) {
             const h = this.canvas.height;
             this.ctx.drawImage(this.bgImage, 0, this.bgY, this.canvas.width, h);
@@ -1115,7 +1133,6 @@ class Game {
             this.ctx.fillRect(0, 0, 400, 600);
         }
 
-        // Враги
         this.enemies.forEach(e => e.draw(this.ctx));
         if (this.boss) this.boss.draw(this.ctx);
         
@@ -1132,10 +1149,8 @@ class Game {
             if (b.isEnemy) b.draw(this.ctx);
         });
         
-        // UI
         this.drawUI();
 
-        // Обратный отсчёт
         if (this.countdown > 0 && this.countdownText) {
             this.ctx.save();
             this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -1167,4 +1182,4 @@ class Game {
     }
 }
 
-const game = new Game();
+const game = new Game(); 
