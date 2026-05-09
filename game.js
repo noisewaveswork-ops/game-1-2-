@@ -114,7 +114,7 @@ class Player {
             if (this.image && this.image.complete && this.image.naturalWidth > 0) {
                 const w = this.width;
                 const h = this.height;
-                ctx.drawImage(this.image, this.x - w/2, this.y - h/2, w, h);
+                ctx.drawImage(this.image, this.x - w/2, this.y - h/2 + 30, w, h);
             } else {
                 ctx.fillStyle = '#00ffcc';
                 ctx.shadowBlur = 12;
