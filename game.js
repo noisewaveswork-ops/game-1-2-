@@ -1299,22 +1299,22 @@ class Game {
         this.laserMode = this.laserKeyDown || this.twoFingers;
 
         const now = performance.now();
-            if (!this.laserMode) {
-    if (now - this.player.lastShotTime > 120) { // 120ms = как у тебя было
+
+if (!this.laserMode) {
+    if (now - this.player.lastShotTime > 120) {
         this.bullets.push(new Bullet(this.player.x, this.player.y - 15, -Math.PI / 2, 9, false));
         this.player.lastShotTime = now;
         this.sound.playerShoot();
-                }
-            }
-        if (this.laserMode) {
+    }
+}
+
+if (this.laserMode) {
     if (now - this.player.lastShotTime > 200) {
         this.bullets.push(new HomingBullet(this.player.x, this.player.y - 5, this));
         this.player.lastShotTime = now;
         this.sound.playerShoot();
     }
 }
-        }
-
         if (this.isMobile) this.player.update(this.mouseX, this.mouseY);
 
         if (this.boss) {
