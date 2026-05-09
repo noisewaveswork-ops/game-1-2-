@@ -1042,21 +1042,21 @@ class Game {
             panelHeight: 600,
 
             lives: {
-                x: 16,
+                x: 30,
                 y: 45,
                 gap: 8,
                 size: 20
             },
 
             score: {
-                x: 384,
+                x: 370,
                 y: 50,
                 size: 14,
                 color: '#d9d9d9'
             },
 
             wave: {
-                x: 384,
+                x: 370,
                 y: 70,
                 size: 12,
                 color: '#d9d9d9'
@@ -1069,7 +1069,7 @@ class Game {
                 size: 24
             } : {
                 startX: 140,
-                startY: 568,
+                startY: 540,
                 gap: 15,
                 size: 30
             }
