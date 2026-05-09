@@ -1,46 +1,50 @@
-html,
-body {
+* {
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
+}
+
+body {
     background: #000;
-    overflow: hidden;
-
-    width: 100%;
-    height: 100%;
-
     display: flex;
     justify-content: center;
     align-items: center;
+    height: 100vh;
+    font-family: 'Arial', sans-serif;
+    overflow: hidden;
+    touch-action: none;
 }
 
 #gameContainer {
     position: relative;
-
-    width: 400px;
-    height: 600px;
-
-    overflow: hidden;
-
-    box-shadow:
-        0 0 30px rgba(255, 0, 35, 0.35);
+    width: 100%;
+    max-width: 400px;
+    aspect-ratio: 2/3;
+    background: #0a0a1a; /* временный фон, пока нет видео */
 }
 
+/* Видео-фон */
+#bgVideo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;       /* заполняет контейнер, обрезая лишнее */
+    z-index: 0;
+    border: 2px solid #333;
+}
+
+/* Канвас поверх видео */
 #gameCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     display: block;
-
-    width: 400px;
-    height: 600px;
-
-    image-rendering: pixelated;
-    background: #000;
-}
-
-.hidden {
-    display: none;
-}
-
-body {
-    font-family: 'Unbounded', sans-serif;
+    z-index: 1;
+    border: 2px solid #333;
 }
 
 #startScreen {
@@ -48,45 +52,36 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    
-    background: linear-gradient(
-        180deg,
-        rgba(8,8,8,0.96) 0%,
-        rgba(20,20,20,0.96) 100%
-    );
-
-    color: #d9d9d9;
-
+    background: rgba(0, 0, 0, 0.92);
+    color: #fff;
     padding: 30px 20px;
     text-align: center;
-
-    border-radius: 14px;
-
-    border: 2px solid #ff0023;
-
-    box-shadow:
-        0 0 25px rgba(255,0,35,0.35),
-        inset 0 0 20px rgba(255,0,35,0.08);
-
+    border-radius: 12px;
+    border: 2px solid #00ffcc;
     z-index: 30;
-    width: 320px;
+    width: 85%;
+    max-width: 340px;
 }
 
 #startScreen h1 {
     font-size: 36px;
-    color: #ff0023;
-
-    text-shadow:
-        0 0 12px rgba(255,0,35,0.8);
-
+    color: #ff3366;
+    text-shadow: 0 0 15px #ff3366;
     margin-bottom: 15px;
+}
 
-    font-family: 'Unbounded', sans-serif;
-    font-weight: 700;
+.controls {
+    margin: 15px 0;
+    font-size: 14px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .controls p {
-    color: #d9d9d9;
+    color: #ccc;
+    margin: 0;
 }
 
 #gameOver {
@@ -94,82 +89,46 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-
-    background: linear-gradient(
-        180deg,
-        rgba(8,8,8,0.96) 0%,
-        rgba(20,20,20,0.96) 100%
-    );
-
-    color: #d9d9d9;
-
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
     padding: 30px 20px;
-
     text-align: center;
-
-    border-radius: 14px;
-
-    border: 2px solid #ff0023;
-
-    box-shadow:
-        0 0 25px rgba(255,0,35,0.35);
-
+    border-radius: 10px;
+    border: 2px solid #ff0000;
     z-index: 20;
     width: 80%;
 }
 
 #gameOver h2 {
     font-size: 28px;
-    color: #ff0023;
-
+    color: #ff0000;
     margin-bottom: 15px;
-
-    font-family: 'Unbounded', sans-serif;
 }
 
 #finalScore {
     font-size: 20px;
     margin-bottom: 15px;
-    color: #d9d9d9;
-
-    font-family: 'Unbounded', sans-serif;
+    color: #fff;
 }
 
 button {
-    background: linear-gradient(
-        180deg,
-        #ff0023 0%,
-        #b00018 100%
-    );
-
-    color: #d9d9d9;
-
-    border: 1px solid rgba(255,255,255,0.08);
-
+    background: #ff3366;
+    color: #fff;
+    border: none;
     padding: 12px 28px;
-
-    font-size: 16px;
-
+    font-size: 18px;
     cursor: pointer;
-
-    border-radius: 8px;
-
-    transition: all 0.2s ease;
-
+    border-radius: 6px;
+    transition: all 0.3s;
     margin-top: 10px;
-
-    font-family: 'Unbounded', sans-serif;
 }
 
 button:hover {
-    transform: translateY(-1px);
+    background: #ff5a7a;
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(255, 51, 102, 0.6);
+}
 
-    box-shadow:
-        0 0 18px rgba(255,0,35,0.45);
-
-    background: linear-gradient(
-        180deg,
-        #ff1a3d 0%,
-        #c0001b 100%
-    );
+.hidden {
+    display: none !important;
 }
