@@ -75,6 +75,16 @@ class SoundManager {
         if (this.ctx) setTimeout(() => this.playTone(800, 0.15, 'square', 0.1), 150);
         if (this.ctx) setTimeout(() => this.playTone(1000, 0.2, 'square', 0.12), 300);
     }
+    pauseAll() {
+    if (this.bgmElement) {
+        this.bgmElement.pause();
+        this.bgmElement.currentTime = 0;
+    }
+
+    if (this.ctx) {
+        this.ctx.suspend(); // ключевая вещь для мобилок
+    }
+}
 }
 
 // ---------- Основные классы ----------
@@ -91,6 +101,7 @@ class Player {
         this.invulnerable = false;
         this.invulnerableTimer = 0;
         this.shootCooldown = 0;
+this.lastShotTime = 0;
     }
 
     update(targetX, targetY) {
@@ -1287,15 +1298,21 @@ class Game {
 
         this.laserMode = this.laserKeyDown || this.twoFingers;
 
-        if (this.player.shootCooldown <= 0) {
-            if (this.laserMode) {
-                this.bullets.push(new HomingBullet(this.player.x, this.player.y - 5, this));
-                this.player.shootCooldown = 12;
-            } else {
-                this.bullets.push(new Bullet(this.player.x, this.player.y - 15, -Math.PI / 2, 9, false));
-                this.player.shootCooldown = 8;
+        const now = performance.now();
+            if (!this.laserMode) {
+    if (now - this.player.lastShotTime > 120) { // 120ms = как у тебя было
+        this.bullets.push(new Bullet(this.player.x, this.player.y - 15, -Math.PI / 2, 9, false));
+        this.player.lastShotTime = now;
+        this.sound.playerShoot();
+                }
             }
-            this.sound.playerShoot();
+        if (this.laserMode) {
+    if (now - this.player.lastShotTime > 200) {
+        this.bullets.push(new HomingBullet(this.player.x, this.player.y - 5, this));
+        this.player.lastShotTime = now;
+        this.sound.playerShoot();
+    }
+}
         }
 
         if (!this.isMobile) this.player.update(this.mouseX, this.mouseY);
@@ -1587,15 +1604,26 @@ this.ctx.restore();
     }
 }
 window.addEventListener('message', (event) => {
-
     if (event.data === 'pauseMusic') {
-
         const bgm = document.getElementById('bgMusic');
-
         if (bgm) {
             bgm.pause();
             bgm.currentTime = 0;
         }
+
+        if (window.game && window.game.sound) {
+            window.game.sound.pauseAll();
+        }
+    }
+});
+
+window.addEventListener('pagehide', () => {
+    window.postMessage('pauseMusic', '*');
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        window.postMessage('pauseMusic', '*');
     }
 });
 const game = new Game(); 
