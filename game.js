@@ -395,6 +395,8 @@ class Boss {
     // =========================================
     // ФАЗА 2 — БОЛЬШИЕ ПУЛИ С КРАЕВ
     // =========================================
+        right.customUpdate = null;
+left.customUpdate = null;
     if (this.phase === 2) {
 
     if (this.timer % 150 === 0) {
@@ -466,7 +468,7 @@ class Boss {
     // =========================================
     if (this.phase === 3) {
 
-    if (this.timer % 3 === 0) {
+    if (this.timer % 5 === 0) {
 
         const base = this.timer * 0.16;
 
