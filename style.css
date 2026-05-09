@@ -44,7 +44,7 @@ body { font-family: 'Unbounded', sans-serif; }
     position: absolute; 
     top: 50%; left: 50%; 
     transform: translate(-50%, -50%); 
-    background: linear-gradient( 180deg, rgba(8,8,8,0.96) 0%, rgba(20,20,20,0.96) 100% ); 
+    background: #080808; 
     color: #d9d9d9; padding: 30px 20px; 
     text-align: center; 
     border-radius: 14px;
@@ -65,7 +65,7 @@ body { font-family: 'Unbounded', sans-serif; }
     top: 50%; 
     left: 50%;
     transform: translate(-50%, -50%); 
-    background: linear-gradient( 180deg, rgba(8,8,8,0.96) 0%, rgba(20,20,20,0.96) 100% ); 
+    background: #080808; 
     color: #d9d9d9; padding: 30px 20px;
     text-align: center; 
     border-radius: 14px; border: 2px solid #ff0023;
@@ -86,9 +86,8 @@ body { font-family: 'Unbounded', sans-serif; }
     font-family: 'Unbounded', sans-serif;
 }
 button { 
-    background: linear-gradient(
-        180deg, #ff0023 0%, #b00018 100% ); 
-    color: #d9d9d9; 
+    background: #d9d9d9; 
+    color: #080808; 
     border: 1px solid rgba(255,255,255,0.08); 
     padding: 12px 28px; font-size: 16px;
     cursor: pointer;
@@ -97,9 +96,7 @@ button {
     font-family: 'Unbounded', sans-serif; 
 }
 button:hover {
-    transform: translateY(-1px);
     box-shadow: 0 0 18px rgba(255,0,35,0.45); 
-    background: linear-gradient( 180deg, #ff1a3d 0%, #c0001b 100% ); 
 }
 #startScreen {
     z-index: 10;
