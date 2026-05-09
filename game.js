@@ -562,12 +562,11 @@ class Boss {
             ctx.stroke();
         }
         
-        // Полоска здоровья
         // Полоска здоровья босса
 const bw = 180;
 const bh = 8;
 const bx = 110;
-const by = 18;
+const by = 45;
 
 ctx.fillStyle = '#111';
 ctx.shadowBlur = 0;
