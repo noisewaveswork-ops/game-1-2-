@@ -395,8 +395,6 @@ class Boss {
     // =========================================
     // ФАЗА 2 — БОЛЬШИЕ ПУЛИ С КРАЕВ
     // =========================================
-        right.customUpdate = null;
-left.customUpdate = null;
     if (this.phase === 2) {
 
     if (this.timer % 150 === 0) {
