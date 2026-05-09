@@ -1,134 +1,54 @@
-* {
+html,
+body {
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
-}
-
-body {
     background: #000;
+    overflow: hidden;
+
+    width: 100%;
+    height: 100%;
+
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    font-family: 'Arial', sans-serif;
-    overflow: hidden;
-    touch-action: none;
 }
 
 #gameContainer {
     position: relative;
-    width: 100%;
-    max-width: 400px;
-    aspect-ratio: 2/3;
-    background: #0a0a1a; /* временный фон, пока нет видео */
+
+    width: 400px;
+    height: 600px;
+
+    overflow: hidden;
+
+    box-shadow:
+        0 0 30px rgba(255, 0, 35, 0.35);
 }
 
-/* Видео-фон */
-#bgVideo {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;       /* заполняет контейнер, обрезая лишнее */
-    z-index: 0;
-    border: 2px solid #333;
-}
-
-/* Канвас поверх видео */
 #gameCanvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
     display: block;
-    z-index: 1;
-    border: 2px solid #333;
-}
 
-#startScreen {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.92);
-    color: #fff;
-    padding: 30px 20px;
-    text-align: center;
-    border-radius: 12px;
-    border: 2px solid #00ffcc;
-    z-index: 30;
-    width: 85%;
-    max-width: 340px;
-}
+    width: 400px;
+    height: 600px;
 
-#startScreen h1 {
-    font-size: 36px;
-    color: #ff3366;
-    text-shadow: 0 0 15px #ff3366;
-    margin-bottom: 15px;
-}
-
-.controls {
-    margin: 15px 0;
-    font-size: 14px;
-    text-align: left;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.controls p {
-    color: #ccc;
-    margin: 0;
-}
-
-#gameOver {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.9);
-    color: #fff;
-    padding: 30px 20px;
-    text-align: center;
-    border-radius: 10px;
-    border: 2px solid #ff0000;
-    z-index: 20;
-    width: 80%;
-}
-
-#gameOver h2 {
-    font-size: 28px;
-    color: #ff0000;
-    margin-bottom: 15px;
-}
-
-#finalScore {
-    font-size: 20px;
-    margin-bottom: 15px;
-    color: #fff;
-}
-
-button {
-    background: #ff3366;
-    color: #fff;
-    border: none;
-    padding: 12px 28px;
-    font-size: 18px;
-    cursor: pointer;
-    border-radius: 6px;
-    transition: all 0.3s;
-    margin-top: 10px;
-}
-
-button:hover {
-    background: #ff5a7a;
-    transform: scale(1.05);
-    box-shadow: 0 0 15px rgba(255, 51, 102, 0.6);
+    image-rendering: pixelated;
+    background: #000;
 }
 
 .hidden {
-    display: none !important;
+    display: none;
 }
+
+body {
+    font-family: 'Unbounded', sans-serif;
+}
+@@ -28,8 +69,7 @@ body {
+        inset 0 0 20px rgba(255,0,35,0.08);
+
+    z-index: 30;
+    width: 85%;
+    max-width: 340px;
+    width: 320px;
+}
+
+#startScreen h1 {
