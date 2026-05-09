@@ -114,7 +114,7 @@ class Player {
             if (this.image && this.image.complete && this.image.naturalWidth > 0) {
                 const w = this.width;
                 const h = this.height;
-                ctx.drawImage(this.image, this.x - w/2, this.y - h/2 + 30, w, h);
+                ctx.drawImage(this.image, this.x - w/2, this.y - h/2, w, h);
             } else {
                 ctx.fillStyle = '#00ffcc';
                 ctx.shadowBlur = 12;
@@ -357,9 +357,9 @@ class Boss {
 
         if (this.timer % 10 === 0) {
 
-            for (let i = 0; i < 12; i++) {
+            for (let i = 0; i < 8; i++) {
 
-                const spread = (i - 6) * 0.18;
+                const spread = (i - 3.5) * 0.22;
 
                 const angle =
                     Math.PI / 2 +
@@ -388,7 +388,7 @@ class Boss {
 
         if (this.timer % 55 === 0) {
 
-            const rows = 5;
+            const rows = 7;
 
             for (let i = 0; i < rows; i++) {
 
@@ -412,7 +412,7 @@ class Boss {
                     430,
                     y + 35,
                     Math.PI,
-                    1.5,
+                    1.1,
                     true
                 );
 
@@ -448,6 +448,11 @@ class Boss {
                 );
             }
         }
+        left.width = 36;
+left.height = 36;
+
+right.width = 36;
+right.height = 36;
     }
 
     // =========================================
@@ -455,38 +460,55 @@ class Boss {
     // =========================================
     if (this.phase === 3) {
 
-        if (this.timer % 4 === 0) {
+    if (this.timer % 3 === 0) {
 
-            const angle = this.timer * 0.18;
+        const base = this.timer * 0.16;
+
+        for (let i = 0; i < 2; i++) {
+
+            const angle = base + Math.PI * i;
 
             const bullet = new Bullet(
                 this.x,
                 this.y,
                 angle,
-                5.5,
+                3.2,
                 true
             );
 
-            bullet.slowdownTimer = 0;
-
-            bullet.customUpdate = function() {
-
-                this.slowdownTimer++;
-
-                if (this.slowdownTimer > 35) {
-                    this.speed *= 0.965;
-                }
-
-                if (this.speed < 1.4) {
-                    this.speed = 1.4;
-                }
-            };
+            bullet.width = 7;
+            bullet.height = 7;
 
             this.game.bullets.push(bullet);
-
-            this.game.sound.enemyShoot();
         }
+
+        // второй слой спирали
+        if (this.timer % 9 === 0) {
+
+            for (let i = 0; i < 2; i++) {
+
+                const angle =
+                    -base * 0.8 +
+                    Math.PI * i;
+
+                const bullet = new Bullet(
+                    this.x,
+                    this.y,
+                    angle,
+                    2.4,
+                    true
+                );
+
+                bullet.width = 10;
+                bullet.height = 10;
+
+                this.game.bullets.push(bullet);
+            }
+        }
+
+        this.game.sound.enemyShoot();
     }
+}
 }
 
     draw(ctx) {
@@ -666,18 +688,40 @@ class Game {
                 }
             },
             spiral: {
-                health: 4, points: 200,
-                update: (enemy) => {
-                    enemy.y += 1.0;
-                    if (enemy.y < 450 && enemy.timer % 55 === 0) {
-                        for (let i = 0; i < 6; i++) {
-                            const angle = (Math.PI * 2 / 6) * i + enemy.timer * 0.04;
-                            this.bullets.push(new Bullet(enemy.x, enemy.y, angle, 2.2, true));
-                        }
-                        this.sound.enemyShoot();
-                    }
-                }
-            },
+
+    health: 5,
+    points: 220,
+
+    update: (enemy) => {
+
+        enemy.y += 0.8;
+
+        if (enemy.y < 420 && enemy.timer % 7 === 0) {
+
+            const base = enemy.timer * 0.12;
+
+            for (let i = 0; i < 2; i++) {
+
+                const angle = base + Math.PI * i;
+
+                const bullet = new Bullet(
+                    enemy.x,
+                    enemy.y,
+                    angle,
+                    2.1,
+                    true
+                );
+
+                bullet.width = 8;
+                bullet.height = 8;
+
+                this.bullets.push(bullet);
+            }
+
+            this.sound.enemyShoot();
+        }
+    }
+},
             sideSweeper: {
                 health: 4, points: 180,
                 update: (enemy) => {
@@ -704,34 +748,281 @@ class Game {
     }
 
     buildWave(waveNumber) {
-        const queue = [];
-        
-        if (waveNumber <= 2) {
-            for (let i = 0; i < 4; i++) {
-                queue.push({ type: 'straightShooter', x: 80 + i * 80, y: -30, delay: i * 35 });
-            }
-        } else if (waveNumber <= 4) {
-            for (let i = 0; i < 3; i++) {
-                queue.push({ type: 'straightShooter', x: 60 + i * 120, y: -30, delay: i * 30 });
-            }
-            queue.push({ type: 'sineFan', x: 200, y: -50, delay: 80 });
-        } else if (waveNumber <= 6) {
-            queue.push({ type: 'straightShooter', x: 100, y: -30, delay: 0 });
-            queue.push({ type: 'straightShooter', x: 300, y: -30, delay: 30 });
-            queue.push({ type: 'spiral', x: 200, y: -40, delay: 60 });
-            queue.push({ type: 'sineFan', x: 280, y: -60, delay: 90 });
-        } else if (waveNumber <= 8) {
-            queue.push({ type: 'sideSweeper', x: -20, y: 100, delay: 25 });
-            queue.push({ type: 'sideSweeper', x: 420, y: 150, delay: 55 });
-            queue.push({ type: 'spiral', x: 200, y: -40, delay: 85 });
-        } else if (waveNumber === 9) {
-            queue.push({ type: 'spiral', x: 120, y: -40, delay: 0 });
-            queue.push({ type: 'spiral', x: 280, y: -40, delay: 45 });
-            queue.push({ type: 'sideSweeper', x: -20, y: 200, delay: 70 });
+
+    const queue = [];
+
+    // =====================================
+    // WAVE 1
+    // ОБУЧЕНИЕ БАЗОВОМУ ШОТУ
+    // =====================================
+
+    if (waveNumber === 1) {
+
+        for (let i = 0; i < 5; i++) {
+
+            queue.push({
+                type: 'straightShooter',
+                x: 70 + i * 65,
+                y: -40,
+                delay: i * 45
+            });
         }
-        
-        return queue;
     }
+
+    // =====================================
+    // WAVE 2
+    // МЕДЛЕННЫЕ ВЕЕРА -> УЧИМ МИКРОДОДЖ
+    // =====================================
+
+    else if (waveNumber === 2) {
+
+        for (let i = 0; i < 4; i++) {
+
+            queue.push({
+                type: 'sineFan',
+                x: 80 + i * 80,
+                y: -50,
+                delay: i * 55
+            });
+        }
+    }
+
+    // =====================================
+    // WAVE 3
+    // ЛАЗЕР/HOMING СТАНОВИТСЯ ПОЛЕЗЕН
+    // =====================================
+
+    else if (waveNumber === 3) {
+
+        queue.push({
+            type: 'sideSweeper',
+            x: -20,
+            y: 120,
+            delay: 0
+        });
+
+        queue.push({
+            type: 'sideSweeper',
+            x: 420,
+            y: 180,
+            delay: 60
+        });
+
+        queue.push({
+            type: 'straightShooter',
+            x: 200,
+            y: -50,
+            delay: 120
+        });
+    }
+
+    // =====================================
+    // WAVE 4
+    // ПЕРВЫЙ "СТРЕСС"
+    // НО С БОЛЬШИМИ ПРОХОДАМИ
+    // =====================================
+
+    else if (waveNumber === 4) {
+
+        queue.push({
+            type: 'spiral',
+            x: 130,
+            y: -40,
+            delay: 0
+        });
+
+        queue.push({
+            type: 'spiral',
+            x: 270,
+            y: -40,
+            delay: 80
+        });
+
+        queue.push({
+            type: 'sineFan',
+            x: 200,
+            y: -60,
+            delay: 150
+        });
+    }
+
+    // =====================================
+    // WAVE 5
+    // ПЕРВАЯ ВОЛНА ПОД БОМБУ
+    // =====================================
+
+    else if (waveNumber === 5) {
+
+        for (let i = 0; i < 6; i++) {
+
+            queue.push({
+                type: 'straightShooter',
+                x: 40 + i * 60,
+                y: -30,
+                delay: i * 18
+            });
+        }
+
+        queue.push({
+            type: 'spiral',
+            x: 200,
+            y: -50,
+            delay: 120
+        });
+    }
+
+    // =====================================
+    // WAVE 6
+    // АКТИВНОЕ ПЕРЕКЛЮЧЕНИЕ ОРУЖИЯ
+    // =====================================
+
+    else if (waveNumber === 6) {
+
+        queue.push({
+            type: 'sideSweeper',
+            x: -20,
+            y: 120,
+            delay: 0
+        });
+
+        queue.push({
+            type: 'sideSweeper',
+            x: 420,
+            y: 120,
+            delay: 40
+        });
+
+        queue.push({
+            type: 'spiral',
+            x: 200,
+            y: -40,
+            delay: 100
+        });
+
+        queue.push({
+            type: 'sineFan',
+            x: 90,
+            y: -40,
+            delay: 170
+        });
+
+        queue.push({
+            type: 'sineFan',
+            x: 310,
+            y: -40,
+            delay: 200
+        });
+    }
+
+    // =====================================
+    // WAVE 7
+    // "НЕ БОЙСЯ БОМБ"
+    // =====================================
+
+    else if (waveNumber === 7) {
+
+        for (let i = 0; i < 3; i++) {
+
+            queue.push({
+                type: 'spiral',
+                x: 80 + i * 120,
+                y: -40,
+                delay: i * 50
+            });
+        }
+
+        queue.push({
+            type: 'sideSweeper',
+            x: -20,
+            y: 200,
+            delay: 180
+        });
+
+        queue.push({
+            type: 'sideSweeper',
+            x: 420,
+            y: 240,
+            delay: 220
+        });
+    }
+
+    // =====================================
+    // WAVE 8
+    // ПОЧТИ БОСС
+    // =====================================
+
+    else if (waveNumber === 8) {
+
+        queue.push({
+            type: 'spiral',
+            x: 120,
+            y: -40,
+            delay: 0
+        });
+
+        queue.push({
+            type: 'spiral',
+            x: 280,
+            y: -40,
+            delay: 40
+        });
+
+        queue.push({
+            type: 'spiral',
+            x: 200,
+            y: -40,
+            delay: 80
+        });
+
+        queue.push({
+            type: 'sideSweeper',
+            x: -20,
+            y: 160,
+            delay: 150
+        });
+
+        queue.push({
+            type: 'sideSweeper',
+            x: 420,
+            y: 160,
+            delay: 190
+        });
+    }
+
+    // =====================================
+    // WAVE 9
+    // ФИНАЛЬНЫЙ ЭКЗАМЕН
+    // =====================================
+
+    else if (waveNumber === 9) {
+
+        for (let i = 0; i < 4; i++) {
+
+            queue.push({
+                type: 'spiral',
+                x: 60 + i * 90,
+                y: -40,
+                delay: i * 35
+            });
+        }
+
+        queue.push({
+            type: 'sideSweeper',
+            x: -20,
+            y: 180,
+            delay: 180
+        });
+
+        queue.push({
+            type: 'sideSweeper',
+            x: 420,
+            y: 180,
+            delay: 220
+        });
+    }
+
+    return queue;
+}
 
     nextWave() {
         this.wave++;
@@ -1065,7 +1356,7 @@ class Game {
             if (bullet.isEnemy) {
                 const dx = bullet.x - this.player.x;
                 const dy = bullet.y - this.player.y;
-                if (Math.sqrt(dx * dx + dy * dy) < 4) {
+                if (Math.sqrt(dx * dx + dy * dy) < 2.2) {
                     this.bullets.splice(i, 1);
                     if (this.player.hit() && this.player.lives <= 0) this.endGame();
                 }
@@ -1076,7 +1367,7 @@ class Game {
             const enemy = this.enemies[i];
             const dx = enemy.x - this.player.x;
             const dy = enemy.y - this.player.y;
-            if (Math.sqrt(dx * dx + dy * dy) < 20) {
+            if (Math.sqrt(dx * dx + dy * dy) < 14) {
                 this.enemies.splice(i, 1);
                 if (this.player.hit() && this.player.lives <= 0) this.endGame();
             }
@@ -1085,7 +1376,7 @@ class Game {
         if (this.boss) {
             const dx = this.boss.x - this.player.x;
             const dy = this.boss.y - this.player.y;
-            if (Math.sqrt(dx * dx + dy * dy) < 40) {
+            if (Math.sqrt(dx * dx + dy * dy) < 28) {
                 if (this.player.hit() && this.player.lives <= 0) this.endGame();
             }
         }
