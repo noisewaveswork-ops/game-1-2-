@@ -263,169 +263,78 @@ class HomingBullet extends Bullet {
 
 // ---------- Класс босса ----------
 class Hibachi {
-            5,
-            this.x,
-            this.y,
-            40
-        );
 
-        grad.addColorStop(0, '#ffffff');
-        grad.addColorStop(0.2, '#ff3355');
-        grad.addColorStop(1, '#440000');
+    constructor(game) {
 
-        ctx.fillStyle = grad;
+        this.game = game;
 
-        ctx.shadowBlur = 40;
-        ctx.shadowColor = '#ff0022';
+        this.x = 200;
+        this.y = -120;
 
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 35, 0, Math.PI * 2);
-        ctx.fill();
+        this.targetY = 120;
 
-        // Eyes
-        ctx.fillStyle = '#ffffff';
+        this.timer = 0;
 
-        ctx.beginPath();
-        ctx.arc(this.x - 12, this.y - 6, 5, 0, Math.PI * 2);
-        ctx.arc(this.x + 12, this.y - 6, 5, 0, Math.PI * 2);
-        ctx.fill();
+        this.entered = false;
 
-        ctx.fillStyle = '#000000';
+        this.maxHealth = 5000;
+        this.health = this.maxHealth;
 
-        ctx.beginPath();
-        ctx.arc(this.x - 12, this.y - 6, 2, 0, Math.PI * 2);
-        ctx.arc(this.x + 12, this.y - 6, 2, 0, Math.PI * 2);
-        ctx.fill();
+        this.phase = 0;
 
-        // Health bar
-        ctx.fillStyle = '#111';
-        ctx.fillRect(50, 30, 300, 12);
+        this.moveTargetX = 200;
 
-        const hpGrad = ctx.createLinearGradient(50, 0, 350, 0);
+        this.auraRotation = 0;
 
-        hpGrad.addColorStop(0, '#ff0022');
-        hpGrad.addColorStop(0.5, '#ff7700');
-        hpGrad.addColorStop(1, '#ffff00');
-
-        ctx.fillStyle = hpGrad;
-
-        ctx.fillRect(
-            50,
-            30,
-            300 * (this.health / this.maxHealth),
-            12
-        );
-
-        ctx.strokeStyle = '#ffffff';
-        ctx.strokeRect(50, 30, 300, 12);
-
-        ctx.restore();
+        this.dead = false;
     }
 
-    hit(dmg = 1) {
+    update() {
 
-        this.health -= dmg;
+        this.timer++;
 
-        if (this.health <= 0) {
-            this.dead = true;
+        this.auraRotation += 0.02;
+
+        // Entrance
+        if (!this.entered) {
+
+            this.y += (this.targetY - this.y) * 0.04;
+
+            if (Math.abs(this.y - this.targetY) < 1) {
+
+                this.entered = true;
+                this.timer = 0;
+                this.phase = 1;
+
+                this.game.sound.bossAppear();
+            }
+
+            return;
         }
 
-        return this.dead;
-    }
-}
+        // Movement
+        this.x += (this.moveTargetX - this.x) * 0.015;
 
-    draw(ctx) {
-        ctx.save();
-        
-        // Тёмный ореол
-        const glow = ctx.createRadialGradient(this.x, this.y, 20, this.x, this.y, 50);
-        glow.addColorStop(0, 'rgba(255,0,35,0.4)');
-        glow.addColorStop(1, 'rgba(255,0,35,0)');
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 50, 0, Math.PI*2);
-        ctx.fill();
-
-        // Основное тело
-        const grad = ctx.createRadialGradient(this.x, this.y, 10, this.x, this.y, 40);
-        grad.addColorStop(0, '#ff0000');
-        grad.addColorStop(0.4, '#ff0023');
-        grad.addColorStop(1, '#4a0010');
-        ctx.fillStyle = grad;
-        ctx.shadowBlur = 25;
-        ctx.shadowColor = '#ff0023';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, 40, 0, Math.PI*2);
-        ctx.fill();
-
-        // Глаза
-        ctx.fillStyle = '#ffffff';
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(this.x-18, this.y-10, 10, 0, Math.PI*2);
-        ctx.arc(this.x+18, this.y-10, 10, 0, Math.PI*2);
-        ctx.fill();
-        ctx.fillStyle = '#000000';
-        ctx.shadowBlur = 0;
-        ctx.beginPath();
-        ctx.arc(this.x-18, this.y-10, 5, 0, Math.PI*2);
-        ctx.arc(this.x+18, this.y-10, 5, 0, Math.PI*2);
-        ctx.fill();
-
-        // Щупальца
-        ctx.strokeStyle = '#ff0023';
-        ctx.lineWidth = 5;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#ff0023';
-        for (let i = 0; i < 6; i++) {
-            const ba = Math.PI/2 + (i-2.5)*0.25;
-            const wiggle = Math.sin(this.timer*0.08 + i)*18;
-            ctx.beginPath();
-            ctx.moveTo(this.x+Math.cos(ba)*30, this.y+Math.sin(ba)*30);
-            ctx.lineTo(
-                this.x+Math.cos(ba)*60 + wiggle*Math.cos(ba+Math.PI/2),
-                this.y+Math.sin(ba)*60 + wiggle*Math.sin(ba+Math.PI/2)
-            );
-            ctx.stroke();
+        if (this.timer % 180 === 0) {
+            this.moveTargetX = 80 + Math.random() * 240;
         }
-        
-        // Полоска здоровья босса
-const bw = 180;
-const bh = 8;
-const bx = 110;
-const by = 45;
 
-ctx.fillStyle = '#111';
-ctx.shadowBlur = 0;
-ctx.fillRect(bx, by, bw, bh);
+        const hp = this.health / this.maxHealth;
 
-const hg = ctx.createLinearGradient(bx, 0, bx + bw, 0);
-hg.addColorStop(0, '#ff0000');
-hg.addColorStop(0.5, '#ff9900');
-hg.addColorStop(1, '#ffff00');
+        if (hp < 0.75 && this.phase === 1) {
+            this.phase = 2;
+            this.timer = 0;
+            this.game.sound.bossPhaseChange();
+        }
 
-ctx.fillStyle = hg;
-ctx.fillRect(
-    bx,
-    by,
-    bw * (this.health / this.maxHealth),
-    bh
-);
+        if (hp < 0.45 && this.phase === 2) {
+            this.phase = 3;
+            this.timer = 0;
+            this.game.sound.bossPhaseChange();
+        }
 
-ctx.strokeStyle = '#ffffff';
-ctx.lineWidth = 1.5;
-ctx.strokeRect(bx, by, bw, bh);
-
-        ctx.restore();
-    }
-
-    hit(damage = 1) {
-        this.health -= damage;
-        return this.health <= 0;
-    }
 }
-
+}
 // ---------- Главный класс игры ----------
 class Game {
     constructor() {
