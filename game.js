@@ -386,74 +386,69 @@ class Boss {
     // =========================================
     if (this.phase === 2) {
 
-        if (this.timer % 55 === 0) {
+    if (this.timer % 55 === 0) {
 
-            const rows = 7;
+        const rows = 7;
 
-            for (let i = 0; i < rows; i++) {
+        for (let i = 0; i < rows; i++) {
 
-                const y = 140 + i * 70;
+            const y = 110 + i * 55;
 
-                // слева
-                const left = new Bullet(
-                    -30,
-                    y,
-                    0,
-                    1.5,
-                    true
-                );
-
-                left.width = 28;
-                left.height = 28;
-                left.color = '#ff3355';
-
-                // справа
-                const right = new Bullet(
-                    430,
-                    y + 35,
-                    Math.PI,
-                    1.1,
-                    true
-                );
-
-                right.width = 28;
-                right.height = 28;
-                right.color = '#ff3355';
-
-                this.game.bullets.push(left);
-                this.game.bullets.push(right);
-            }
-
-            this.game.sound.enemyShoot();
-        }
-
-        // дополнительные прицельные выстрелы
-        if (this.timer % 80 === 0) {
-
-            const angle = Math.atan2(
-                this.game.player.y - this.y,
-                this.game.player.x - this.x
+            // LEFT
+            const left = new Bullet(
+                -30,
+                y,
+                0,
+                1.1,
+                true
             );
 
-            for (let i = -1; i <= 1; i++) {
+            left.width = 36;
+            left.height = 36;
+            left.color = '#ff3355';
 
-                this.game.bullets.push(
-                    new Bullet(
-                        this.x,
-                        this.y,
-                        angle + i * 0.2,
-                        3,
-                        true
-                    )
-                );
-            }
+            // RIGHT
+            const right = new Bullet(
+                430,
+                y + 28,
+                Math.PI,
+                1.1,
+                true
+            );
+
+            right.width = 36;
+            right.height = 36;
+            right.color = '#ff3355';
+
+            this.game.bullets.push(left);
+            this.game.bullets.push(right);
         }
-        left.width = 36;
-left.height = 36;
 
-right.width = 36;
-right.height = 36;
+        this.game.sound.enemyShoot();
     }
+
+    // прицельные выстрелы
+    if (this.timer % 90 === 0) {
+
+        const angle = Math.atan2(
+            this.game.player.y - this.y,
+            this.game.player.x - this.x
+        );
+
+        for (let i = -1; i <= 1; i++) {
+
+            this.game.bullets.push(
+                new Bullet(
+                    this.x,
+                    this.y,
+                    angle + i * 0.18,
+                    2.8,
+                    true
+                )
+            );
+        }
+    }
+}
 
     // =========================================
     // ФАЗА 3 — СПИРАЛЬ С ЗАМЕДЛЕНИЕМ
