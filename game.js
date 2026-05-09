@@ -3,6 +3,7 @@ class SoundManager {
     constructor() {
         this.ctx = null;
         this.initialized = false;
+        this.bgmElement = document.getElementById('bgMusic');
     }
 
     init() {
@@ -53,7 +54,7 @@ class SoundManager {
     }
 
     playerShoot() { this.playTone(880, 0.05, 'square', 0.08); }
-    enemyShoot() { this.playTone(440, 0.08, 'square', 0.06); }
+    enemyShoot() { this.playTone(440, 0.05, 'square', 0.03); }
     enemyHit() { this.playNoise(0.03, 0.1); }
     bossHit() { this.playNoise(0.05, 0.15); }
     bomb() {
@@ -178,9 +179,14 @@ class Bullet {
     }
 
     update() {
-        this.x += Math.cos(this.angle) * this.speed;
-        this.y += Math.sin(this.angle) * this.speed;
+
+    if (this.customUpdate) {
+        this.customUpdate();
     }
+
+    this.x += Math.cos(this.angle) * this.speed;
+    this.y += Math.sin(this.angle) * this.speed;
+}
 
     draw(ctx) {
         ctx.save();
@@ -305,114 +311,183 @@ class Boss {
     }
 
     update() {
-        this.timer++;
-        
-        // Вход
-        if (!this.entered) {
-            this.y += (this.targetY - this.y) * 0.03;
-            if (Math.abs(this.y - this.targetY) < 1) {
-                this.y = this.targetY;
-                this.entered = true;
-                this.timer = 0;
-                this.game.sound.bossAppear();
-            }
-            return;
-        }
+    this.timer++;
 
-        // Фазы по здоровью: 1 (>60%), 2 (30-60%), 3 (<30%)
-        const hp = this.health / this.maxHealth;
-        const newPhase = hp > 0.6 ? 1 : (hp > 0.3 ? 2 : 3);
-        if (newPhase !== this.phase) {
-            this.phase = newPhase;
+    // Вход босса
+    if (!this.entered) {
+        this.y += (this.targetY - this.y) * 0.03;
+
+        if (Math.abs(this.y - this.targetY) < 1) {
+            this.y = this.targetY;
+            this.entered = true;
             this.timer = 0;
-            this.game.sound.bossPhaseChange();
+            this.game.sound.bossAppear();
         }
 
-        // Движение строго горизонтально
-        this.y = this.targetY;
-        this.x += this.xSpeed * this.xDirection;
-        if (this.x >= 340) { this.x = 340; this.xDirection = -1; }
-        else if (this.x <= 60) { this.x = 60; this.xDirection = 1; }
+        return;
+    }
 
-        // Атаки в стиле Touhou (медленные плотные паттерны)
-        switch(this.phase) {
-            case 1:
-                // Веерная атака: 5 струй, медленно
-                if (this.timer % 15 === 0) {
-                    const base = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
-                    for (let i = -2; i <= 2; i++) {
-                        this.game.bullets.push(new Bullet(this.x, this.y + 15, base + i * 0.18, 1.5, true));
-                    }
-                    this.game.sound.enemyShoot();
-                }
-                // Круговая спираль 2 ряда
-                if (this.timer % 40 === 0) {
-                    for (let r = 0; r < 2; r++) {
-                        for (let i = 0; i < 10; i++) {
-                            const a = (Math.PI*2/10)*i + this.timer*0.03 + r*Math.PI/10;
-                            this.game.bullets.push(new Bullet(this.x, this.y, a, 1.8 + r*0.3, true));
-                        }
-                    }
-                    this.game.sound.enemyShoot();
-                }
-                break;
-            case 2:
-                // Спираль 3 ряда с разной скоростью
-                if (this.timer % 30 === 0) {
-                    for (let r = 0; r < 3; r++) {
-                        for (let i = 0; i < 12; i++) {
-                            const a = (Math.PI*2/12)*i + this.timer*0.04 + r*Math.PI/12;
-                            this.game.bullets.push(new Bullet(this.x, this.y, a, 1.5 + r*0.4, true));
-                        }
-                    }
-                    this.game.sound.enemyShoot();
-                }
-                // Прицельная очередь с задержками
-                if (this.timer % 55 === 0) {
-                    const base = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
-                    for (let j = 0; j < 5; j++) {
-                        setTimeout(() => {
-                            if (this.health > 0) {
-                                for (let i = -1; i <= 1; i++) {
-                                    this.game.bullets.push(new Bullet(this.x, this.y+20, base + i*0.15, 2.5, true));
-                                }
-                                this.game.sound.enemyShoot();
-                            }
-                        }, j * 120);
-                    }
-                }
-                break;
-            case 3:
-                // Плотная спираль с переменной скоростью
-                if (this.timer % 25 === 0) {
-                    for (let r = 0; r < 4; r++) {
-                        for (let i = 0; i < 16; i++) {
-                            const a = (Math.PI*2/16)*i + this.timer*0.05 + r*Math.PI/16;
-                            this.game.bullets.push(new Bullet(this.x, this.y, a, 1.2 + r*0.5, true));
-                        }
-                    }
-                    this.game.sound.enemyShoot();
-                }
-                // Двойная веерная атака с двух сторон
-                if (this.timer % 50 === 0) {
-                    const base = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);
-                    for (let i = -4; i <= 4; i++) {
-                        this.game.bullets.push(new Bullet(this.x-20, this.y+10, base + i*0.2, 2.8, true));
-                        this.game.bullets.push(new Bullet(this.x+20, this.y+10, base + i*0.2, 2.8, true));
-                    }
-                    this.game.sound.enemyShoot();
-                }
-                // Круговая волна
-                if (this.timer % 70 === 0) {
-                    for (let i = 0; i < 24; i++) {
-                        const a = (Math.PI*2/24)*i;
-                        this.game.bullets.push(new Bullet(this.x, this.y, a, 2.2, true));
-                    }
-                    this.game.sound.enemyShoot();
-                }
-                break;
+    // Фазы
+    const hp = this.health / this.maxHealth;
+    const newPhase = hp > 0.66 ? 1 : (hp > 0.33 ? 2 : 3);
+
+    if (newPhase !== this.phase) {
+        this.phase = newPhase;
+        this.timer = 0;
+        this.game.sound.bossPhaseChange();
+    }
+
+    // Горизонтальное движение
+    this.y = this.targetY;
+
+    this.x += this.xSpeed * this.xDirection;
+
+    if (this.x >= 340) {
+        this.x = 340;
+        this.xDirection = -1;
+    } else if (this.x <= 60) {
+        this.x = 60;
+        this.xDirection = 1;
+    }
+
+    // =========================================
+    // ФАЗА 1 — СИНУС ВОЛНЫ
+    // =========================================
+    if (this.phase === 1) {
+
+        if (this.timer % 10 === 0) {
+
+            for (let i = 0; i < 12; i++) {
+
+                const spread = (i - 6) * 0.18;
+
+                const angle =
+                    Math.PI / 2 +
+                    spread +
+                    Math.sin((this.timer + i * 8) * 0.08) * 0.35;
+
+                const bullet = new Bullet(
+                    this.x,
+                    this.y + 10,
+                    angle,
+                    2.2,
+                    true
+                );
+
+                this.game.bullets.push(bullet);
+            }
+
+            this.game.sound.enemyShoot();
         }
     }
+
+    // =========================================
+    // ФАЗА 2 — БОЛЬШИЕ ПУЛИ С КРАЕВ
+    // =========================================
+    if (this.phase === 2) {
+
+        if (this.timer % 55 === 0) {
+
+            const rows = 5;
+
+            for (let i = 0; i < rows; i++) {
+
+                const y = 140 + i * 70;
+
+                // слева
+                const left = new Bullet(
+                    -30,
+                    y,
+                    0,
+                    1.5,
+                    true
+                );
+
+                left.width = 28;
+                left.height = 28;
+                left.color = '#ff3355';
+
+                // справа
+                const right = new Bullet(
+                    430,
+                    y + 35,
+                    Math.PI,
+                    1.5,
+                    true
+                );
+
+                right.width = 28;
+                right.height = 28;
+                right.color = '#ff3355';
+
+                this.game.bullets.push(left);
+                this.game.bullets.push(right);
+            }
+
+            this.game.sound.enemyShoot();
+        }
+
+        // дополнительные прицельные выстрелы
+        if (this.timer % 80 === 0) {
+
+            const angle = Math.atan2(
+                this.game.player.y - this.y,
+                this.game.player.x - this.x
+            );
+
+            for (let i = -1; i <= 1; i++) {
+
+                this.game.bullets.push(
+                    new Bullet(
+                        this.x,
+                        this.y,
+                        angle + i * 0.2,
+                        3,
+                        true
+                    )
+                );
+            }
+        }
+    }
+
+    // =========================================
+    // ФАЗА 3 — СПИРАЛЬ С ЗАМЕДЛЕНИЕМ
+    // =========================================
+    if (this.phase === 3) {
+
+        if (this.timer % 4 === 0) {
+
+            const angle = this.timer * 0.18;
+
+            const bullet = new Bullet(
+                this.x,
+                this.y,
+                angle,
+                5.5,
+                true
+            );
+
+            bullet.slowdownTimer = 0;
+
+            bullet.customUpdate = function() {
+
+                this.slowdownTimer++;
+
+                if (this.slowdownTimer > 35) {
+                    this.speed *= 0.965;
+                }
+
+                if (this.speed < 1.4) {
+                    this.speed = 1.4;
+                }
+            };
+
+            this.game.bullets.push(bullet);
+
+            this.game.sound.enemyShoot();
+        }
+    }
+}
 
     draw(ctx) {
         ctx.save();
@@ -474,17 +549,12 @@ class Boss {
         const bw = 300, bh = 10;
         ctx.fillStyle = '#222';
         ctx.shadowBlur = 0;
-        ctx.fillRect(50, 10, bw, bh);
+        ctx.fillRect(50, 560, bw, bh);
         const hg = ctx.createLinearGradient(50,0,350,0);
         hg.addColorStop(0,'#ff0000'); hg.addColorStop(0.5,'#ffff00'); hg.addColorStop(1,'#00ff00');
         ctx.fillStyle = hg;
-        ctx.fillRect(50,10, bw*(this.health/this.maxHealth), bh);
-        ctx.strokeStyle = '#fff'; ctx.lineWidth=2; ctx.strokeRect(50,10,bw,bh);
-
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 12px "Unbounded", Arial';
-        ctx.textAlign='left';
-        ctx.fillText(`Фаза ${this.phase}`, 50, 38);
+        ctx.fillRect(50, 560, bw*(this.health/this.maxHealth), bh);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth=2; ctx.strokeRect(50,560,bw,bh);
 
         ctx.restore();
     }
@@ -995,7 +1065,7 @@ class Game {
             if (bullet.isEnemy) {
                 const dx = bullet.x - this.player.x;
                 const dy = bullet.y - this.player.y;
-                if (Math.sqrt(dx * dx + dy * dy) < 6) {
+                if (Math.sqrt(dx * dx + dy * dy) < 4) {
                     this.bullets.splice(i, 1);
                     if (this.player.hit() && this.player.lives <= 0) this.endGame();
                 }
@@ -1207,5 +1277,16 @@ class Game {
         requestAnimationFrame((nextTimestamp) => this.gameLoop(nextTimestamp));
     }
 }
+window.addEventListener('message', (event) => {
 
+    if (event.data === 'pauseMusic') {
+
+        const bgm = document.getElementById('bgMusic');
+
+        if (bgm) {
+            bgm.pause();
+            bgm.currentTime = 0;
+        }
+    }
+});
 const game = new Game(); 
