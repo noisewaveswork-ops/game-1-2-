@@ -193,7 +193,7 @@ class Bullet {
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle);
         ctx.fillStyle = this.color;
-        ctx.shadowBlur = this.isEnemy ? 8 : 6;
+        ctx.shadowBlur = 4;
         ctx.shadowColor = this.color;
         ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
         ctx.restore();
@@ -355,30 +355,30 @@ class Boss {
     // =========================================
     if (this.phase === 1) {
 
-        if (this.timer % 10 === 0) {
+        if (this.timer % 16 === 0) {
 
-            for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 6; i++) {
 
-                const spread = (i - 3.5) * 0.22;
+        const spread = (i - 2.5) * 0.20;
 
-                const angle =
-                    Math.PI / 2 +
-                    spread +
-                    Math.sin((this.timer + i * 8) * 0.08) * 0.35;
+        const angle =
+            Math.PI / 2 +
+            spread +
+            Math.sin((this.timer + i * 10) * 0.06) * 0.22;
 
-                const bullet = new Bullet(
-                    this.x,
-                    this.y + 10,
-                    angle,
-                    2.2,
-                    true
-                );
+        const bullet = new Bullet(
+            this.x,
+            this.y + 10,
+            angle,
+            2.0,
+            true
+        );
 
-                this.game.bullets.push(bullet);
-            }
+        this.game.bullets.push(bullet);
+    }
 
-            this.game.sound.enemyShoot();
-        }
+    this.game.sound.enemyShoot();
+}
     }
 
     // =========================================
@@ -386,9 +386,9 @@ class Boss {
     // =========================================
     if (this.phase === 2) {
 
-    if (this.timer % 95 === 0) {
+    if (this.timer % 150 === 0) {
 
-        const rows = 5;
+        const rows = 3;
 
         for (let i = 0; i < rows; i++) {
 
@@ -405,7 +405,7 @@ class Boss {
 
             left.width = 36;
             left.height = 36;
-            left.color = '#ff3355';
+            left.color = '#ff0023';
 
             // RIGHT
             const right = new Bullet(
@@ -418,7 +418,7 @@ class Boss {
 
             right.width = 36;
             right.height = 36;
-            right.color = '#ff3355';
+            right.color = '#ff0023';
 
             this.game.bullets.push(left);
             this.game.bullets.push(right);
@@ -1551,15 +1551,22 @@ class Game {
 
         if (this.countdown > 0 && this.countdownText) {
             this.ctx.save();
-            this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            this.ctx.fillRect(0, 0, 400, 600);
-            this.ctx.font = 'bold 120px "Unbounded", Arial';
-            this.ctx.fillStyle = '#ffffff';
-            this.ctx.textAlign = 'center';
-            this.ctx.shadowBlur = 20;
-            this.ctx.shadowColor = '#ff0000';
-            this.ctx.fillText(this.countdownText, 200, 320);
-            this.ctx.restore();
+
+this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
+this.ctx.fillRect(0, 0, 400, 600);
+
+this.ctx.font = '700 110px "Unbounded", sans-serif';
+this.ctx.textAlign = 'center';
+this.ctx.textBaseline = 'middle';
+
+this.ctx.fillStyle = '#d9d9d9';
+
+this.ctx.shadowBlur = 20;
+this.ctx.shadowColor = '#ff0023';
+
+this.ctx.fillText(this.countdownText, 200, 300);
+
+this.ctx.restore();
         }
     }
 
