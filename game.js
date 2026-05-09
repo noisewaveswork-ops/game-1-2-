@@ -191,7 +191,7 @@ class Bullet {
     draw(ctx) {
         ctx.save();
         ctx.translate(this.x, this.y);
-        ctx.rotate(this.angle + Math.PI/2);
+        ctx.rotate(this.angle);
         ctx.fillStyle = this.color;
         ctx.shadowBlur = this.isEnemy ? 8 : 6;
         ctx.shadowColor = this.color;
@@ -386,49 +386,52 @@ class Boss {
     // =========================================
     if (this.phase === 2) {
 
-    if (this.timer % 55 === 0) {
+    // огромные стены
+    if (this.timer % 70 === 0) {
 
-        const rows = 7;
+        const gapY = 120 + Math.random() * 250;
+        const gapSize = 90;
 
-        for (let i = 0; i < rows; i++) {
+        for (let y = 40; y < 560; y += 45) {
 
-            const y = 110 + i * 55;
+            if (y > gapY && y < gapY + gapSize) {
+                continue;
+            }
 
-            // LEFT
-            const left = new Bullet(
-                -30,
+            const leftBullet = new Bullet(
+                -20,
                 y,
                 0,
-                1.1,
+                1.8,
                 true
             );
 
-            left.width = 36;
-            left.height = 36;
-            left.color = '#ff3355';
+            leftBullet.width = 42;
+            leftBullet.height = 42;
+            leftBullet.color = '#ff3355';
 
-            // RIGHT
-            const right = new Bullet(
-                430,
-                y + 28,
+            this.game.bullets.push(leftBullet);
+
+            const rightBullet = new Bullet(
+                420,
+                y + 20,
                 Math.PI,
-                1.1,
+                1.8,
                 true
             );
 
-            right.width = 36;
-            right.height = 36;
-            right.color = '#ff3355';
+            rightBullet.width = 42;
+            rightBullet.height = 42;
+            rightBullet.color = '#ff3355';
 
-            this.game.bullets.push(left);
-            this.game.bullets.push(right);
+            this.game.bullets.push(rightBullet);
         }
 
         this.game.sound.enemyShoot();
     }
 
-    // прицельные выстрелы
-    if (this.timer % 90 === 0) {
+    // прицельный тройной выстрел
+    if (this.timer % 95 === 0) {
 
         const angle = Math.atan2(
             this.game.player.y - this.y,
@@ -437,16 +440,21 @@ class Boss {
 
         for (let i = -1; i <= 1; i++) {
 
-            this.game.bullets.push(
-                new Bullet(
-                    this.x,
-                    this.y,
-                    angle + i * 0.18,
-                    2.8,
-                    true
-                )
+            const bullet = new Bullet(
+                this.x,
+                this.y + 20,
+                angle + i * 0.2,
+                3.5,
+                true
             );
+
+            bullet.width = 10;
+            bullet.height = 10;
+
+            this.game.bullets.push(bullet);
         }
+
+        this.game.sound.enemyShoot();
     }
 }
 
@@ -563,15 +571,32 @@ class Boss {
         }
         
         // Полоска здоровья
-        const bw = 300, bh = 10;
-        ctx.fillStyle = '#222';
-        ctx.shadowBlur = 0;
-        ctx.fillRect(50, 560, bw, bh);
-        const hg = ctx.createLinearGradient(50,0,350,0);
-        hg.addColorStop(0,'#ff0000'); hg.addColorStop(0.5,'#ffff00'); hg.addColorStop(1,'#00ff00');
-        ctx.fillStyle = hg;
-        ctx.fillRect(50, 560, bw*(this.health/this.maxHealth), bh);
-        ctx.strokeStyle = '#fff'; ctx.lineWidth=2; ctx.strokeRect(50,560,bw,bh);
+        // Полоска здоровья босса
+const bw = 180;
+const bh = 8;
+const bx = 110;
+const by = 18;
+
+ctx.fillStyle = '#111';
+ctx.shadowBlur = 0;
+ctx.fillRect(bx, by, bw, bh);
+
+const hg = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+hg.addColorStop(0, '#ff0000');
+hg.addColorStop(0.5, '#ff9900');
+hg.addColorStop(1, '#ffff00');
+
+ctx.fillStyle = hg;
+ctx.fillRect(
+    bx,
+    by,
+    bw * (this.health / this.maxHealth),
+    bh
+);
+
+ctx.strokeStyle = '#ffffff';
+ctx.lineWidth = 1.5;
+ctx.strokeRect(bx, by, bw, bh);
 
         ctx.restore();
     }
