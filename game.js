@@ -1315,7 +1315,7 @@ class Game {
 }
         }
 
-        if (!this.isMobile) this.player.update(this.mouseX, this.mouseY);
+        if (this.isMobile) this.player.update(this.mouseX, this.mouseY);
 
         if (this.boss) {
             this.boss.update();
