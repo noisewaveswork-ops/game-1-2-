@@ -7,14 +7,23 @@ class SoundManager {
     }
 
     init() {
-        async init() {
+        if (this.initialized) return;
 
-    if (!this.ctx) {
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
 
-        this.ctx = new (
-            window.AudioContext ||
-            window.webkitAudioContext
-        )();
+            const buf = this.ctx.createBuffer(1, 1, 22050);
+            const src = this.ctx.createBufferSource();
+
+            src.buffer = buf;
+            src.connect(this.ctx.destination);
+            src.start(0);
+
+        } catch(e) {
+            console.warn('Web Audio API не поддерживается');
+        }
+
+        this.initialized = true;
     }
 
     if (this.ctx.state === 'suspended') {
