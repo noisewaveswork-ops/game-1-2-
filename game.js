@@ -218,7 +218,7 @@ this.lastShotTime = 0;
         ctx.shadowBlur = 12;
         ctx.shadowColor = '#7ab6ff';
         ctx.beginPath();
-        ctx.arc(this.x, this.y, 5, 0, 2 * Math.PI);
+        ctx.arc(this.x, this.y, 2, 0, 2 * Math.PI);
         ctx.fill();
         ctx.strokeStyle = '#7ab6ff';
         ctx.lineWidth = 2.5;
@@ -610,15 +610,17 @@ class Game {
     }
 
     setupEventListeners() {
-        this.canvas.addEventListener('mousemove', (e) => {
-            if (this.isMobile) return;
-            const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.canvas.width / rect.width;
-            const scaleY = this.canvas.height / rect.height;
-            this.mouseX = (e.clientX - rect.left) * scaleX;
-            this.mouseY = (e.clientY - rect.top) * scaleY;
-            this.player.update(this.mouseX, this.mouseY);
-        });
+        window.addEventListener('mousemove', (e) => {
+    if (this.isMobile) return;
+
+    const rect = this.canvas.getBoundingClientRect();
+
+    const scaleX = this.canvas.width / rect.width;
+    const scaleY = this.canvas.height / rect.height;
+
+    this.mouseX = (e.clientX - rect.left) * scaleX;
+    this.mouseY = (e.clientY - rect.top) * scaleY;
+});
 
         window.addEventListener('keydown', (e) => {
             if (e.code === 'KeyZ') this.laserKeyDown = true;
@@ -824,7 +826,7 @@ if (this.laserMode) {
         this.sound.playerShoot();
     }
 }
-        if (this.isMobile) this.player.update(this.mouseX, this.mouseY);
+        this.player.update(this.mouseX, this.mouseY);
 
         if (this.boss) {
             this.boss.update();
@@ -876,7 +878,7 @@ if (this.laserMode) {
             const dx = bullet.x - this.player.x;
             const dy = bullet.y - this.player.y;
 
-            if (Math.sqrt(dx * dx + dy * dy) < 2.2) {
+            if (Math.sqrt(dx * dx + dy * dy) < 3) {
                 this.bullets.splice(i, 1);
 
                 if (this.player.hit() && this.player.lives <= 0) {
@@ -890,7 +892,7 @@ if (this.laserMode) {
         const dx = this.boss.x - this.player.x;
         const dy = this.boss.y - this.player.y;
 
-        if (Math.sqrt(dx * dx + dy * dy) < 28) {
+        if (Math.sqrt(dx * dx + dy * dy) < 12) {
             if (this.player.hit() && this.player.lives <= 0) {
                 this.endGame();
             }
