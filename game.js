@@ -650,7 +650,6 @@ if (this.laserMode) {
         
         this.checkCollisions();
         }
-    }
 
     checkCollisions() {
         for (let i = this.bullets.length - 1; i >= 0; i--) {
