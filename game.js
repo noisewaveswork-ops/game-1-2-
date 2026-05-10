@@ -377,8 +377,6 @@ class Game {
         this.gameRunning = false;
         this.gameOver = false;
         this.gameComplete = false;
-        this.waveStep = 0;
-        this.waveSpawnQueue = [];
         this.gameTimer = 0;
 
         this.laserMode = false;
@@ -410,10 +408,7 @@ class Game {
     
 
     spawnBoss() {
-        this.boss = new Boss(200, -50, this);
-        this.bossSpawned = true;
-        this.enemies = [];
-        this.waveSpawnQueue = [];
+        this.boss = new Hibachi(this);
     }
 
     
@@ -553,12 +548,8 @@ class Game {
         document.getElementById('gameOver').classList.add('hidden');
         this.player = new Player(200, 500, this.playerImage);
         this.bullets = [];
-        this.enemies = [];
         this.boss = null;
-        this.wave = 0;
         this.gameTimer = 0;
-        this.bossSpawned = false;
-        this.nextWave();
         this.laserMode = false;
         this.laserKeyDown = false;
         this.twoFingers = false;
@@ -582,11 +573,6 @@ class Game {
                 }
                 this.sound.bossHit();
             }
-            this.enemies.forEach(enemy => {
-                if (enemy.hit(3)) this.player.score += enemy.points * 2;
-            });
-            this.enemies = this.enemies.filter(e => e.health > 0);
-            this.sound.bomb();
         }
     }
 
@@ -626,9 +612,6 @@ class Game {
 
         this.gameTimer++;
 
-        if (!this.bossSpawned && this.wave >= 10) {
-            this.spawnBoss();
-        }
 
         this.laserMode = this.laserKeyDown || this.twoFingers;
 
@@ -664,14 +647,8 @@ if (this.laserMode) {
         this.bullets = this.bullets.filter(b => !b.isOffScreen());
 
         
-        if (!this.bossSpawned) {
-            this.spawnFromQueue();
-        }
         
         this.checkCollisions();
-
-        if (!this.bossSpawned && this.enemies.length === 0 && this.waveSpawnQueue.length === 0 && this.wave < 10) {
-            this.nextWave();
         }
     }
 
@@ -694,17 +671,6 @@ if (this.laserMode) {
                     }
                 }
                 
-                for (let j = this.enemies.length - 1; j >= 0; j--) {
-                    const enemy = this.enemies[j];
-                    const dx = bullet.x - enemy.x;
-                    const dy = bullet.y - enemy.y;
-                    if (Math.sqrt(dx * dx + dy * dy) < 18) {
-                        this.bullets.splice(i, 1);
-                        if (enemy.hit(bullet.damage || 1)) {
-                            this.player.score += enemy.points;
-                            this.enemies.splice(j, 1);
-                            this.sound.enemyHit();
-                        }
                         break;
                     }
                 }
@@ -723,15 +689,6 @@ if (this.laserMode) {
             }
         }
 
-        for (let i = this.enemies.length - 1; i >= 0; i--) {
-            const enemy = this.enemies[i];
-            const dx = enemy.x - this.player.x;
-            const dy = enemy.y - this.player.y;
-            if (Math.sqrt(dx * dx + dy * dy) < 14) {
-                this.enemies.splice(i, 1);
-                if (this.player.hit() && this.player.lives <= 0) this.endGame();
-            }
-        }
         
         if (this.boss) {
             const dx = this.boss.x - this.player.x;
@@ -759,39 +716,36 @@ if (this.laserMode) {
         this.bombIconPositions = [];
 
         const UI = {
-            panelY: 0,
-            panelHeight: 600,
 
-            lives: {
-                x: 30,
-                y: 45,
-                gap: 8,
-                size: 20
-            },
+    panelY: 0,
+    panelHeight: 600,
 
-            score: {
-                x: 370,
-                y: 50,
-                size: 14,
-                color: '#d9d9d9'
-            },
+    lives: {
+        x: 30,
+        y: 45,
+        gap: 8,
+        size: 20
+    },
 
-        
-            },
+    score: {
+        x: 370,
+        y: 50,
+        size: 14,
+        color: '#d9d9d9'
+    },
 
-            bombs: this.isMobile ? {
-                startX: 370,
-                startY: 270,
-                gap: 8,
-                size: 24
-            } : {
-                startX: 140,
-                startY: 540,
-                gap: 15,
-                size: 30
-            }
-        };
-
+    bombs: this.isMobile ? {
+        startX: 370,
+        startY: 270,
+        gap: 8,
+        size: 24
+    } : {
+        startX: 140,
+        startY: 540,
+        gap: 15,
+        size: 30
+    }
+};
         const ctx = this.ctx;
         ctx.save();
 
@@ -824,10 +778,6 @@ if (this.laserMode) {
         ctx.textAlign = 'right';
         ctx.fillText(`${this.player.score}`, UI.score.x, UI.panelY + UI.score.y);
 
-        ctx.font = `${UI.wave.size}px "Unbounded", "Unbounded Medium", Arial`;
-        ctx.fillStyle = UI.wave.color;
-        ctx.fillText(`Волна ${this.wave}`, UI.wave.x, UI.panelY + UI.wave.y);
-        ctx.textAlign = 'left';
 
         const bv = UI.bombs;
         if (this.isMobile) {
@@ -879,7 +829,6 @@ if (this.laserMode) {
             this.ctx.fillRect(0, 0, 400, 600);
         }
 
-        this.enemies.forEach(e => e.draw(this.ctx));
         if (this.boss) this.boss.draw(this.ctx);
         
         this.bullets.forEach(b => {
