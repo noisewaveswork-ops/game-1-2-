@@ -334,6 +334,26 @@ class Hibachi {
         }
 
 }
+    draw(ctx) {
+    ctx.save();
+
+    ctx.translate(this.x, this.y);
+
+    ctx.fillStyle = '#ff0023';
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#ff0023';
+
+    ctx.beginPath();
+    ctx.arc(0, 0, 35, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+hit(damage) {
+    this.health -= damage;
+    return this.health <= 0;
+}
 }
 // ---------- Главный класс игры ----------
 class Game {
@@ -396,6 +416,8 @@ class Game {
         this.lastTime = 0;
         this.accumulator = 0;
         this.fixedDelta = 1000 / 60;
+        this.enemies = [];
+        this.wave = 1;
 
         this.boss = new Hibachi(this);
 
@@ -585,9 +607,11 @@ class Game {
         document.querySelector('#gameOver h2').style.color = '#7ab6ff';
         this.sound.waveStart();
         
-        if (this.bgmElement) {
-            this.bgmElement.pause();
-        }
+        const bgm = document.getElementById('bgMusic');
+
+if (bgm) {
+    bgm.pause();
+}
     }
 
     update() {
@@ -652,51 +676,59 @@ if (this.laserMode) {
         }
 
     checkCollisions() {
-        for (let i = this.bullets.length - 1; i >= 0; i--) {
-            const bullet = this.bullets[i];
-            if (!bullet.isEnemy) {
-                if (this.boss) {
-                    const dx = bullet.x - this.boss.x;
-                    const dy = bullet.y - this.boss.y;
-                    if (Math.sqrt(dx * dx + dy * dy) < 40) {
-                        this.bullets.splice(i, 1);
-                        this.sound.bossHit();
-                        if (this.boss.hit(bullet.damage || 1)) {
-                            this.player.score += this.boss.points;
-                            this.boss = null;
-                            this.completeGame();
-                        }
-                        continue;
-                    }
-                }
-                
-                        break;
-                    }
-                }
-            }
-        }
+    for (let i = this.bullets.length - 1; i >= 0; i--) {
+        const bullet = this.bullets[i];
 
-        for (let i = this.bullets.length - 1; i >= 0; i--) {
-            const bullet = this.bullets[i];
-            if (bullet.isEnemy) {
-                const dx = bullet.x - this.player.x;
-                const dy = bullet.y - this.player.y;
-                if (Math.sqrt(dx * dx + dy * dy) < 2.2) {
+        if (!bullet.isEnemy) {
+            if (this.boss) {
+                const dx = bullet.x - this.boss.x;
+                const dy = bullet.y - this.boss.y;
+
+                if (Math.sqrt(dx * dx + dy * dy) < 40) {
                     this.bullets.splice(i, 1);
-                    if (this.player.hit() && this.player.lives <= 0) this.endGame();
-                }
-            }
-        }
 
-        
-        if (this.boss) {
-            const dx = this.boss.x - this.player.x;
-            const dy = this.boss.y - this.player.y;
-            if (Math.sqrt(dx * dx + dy * dy) < 28) {
-                if (this.player.hit() && this.player.lives <= 0) this.endGame();
+                    this.sound.bossHit();
+
+                    this.boss.health -= bullet.damage || 1;
+
+                    if (this.boss.health <= 0) {
+                        this.completeGame();
+                    }
+
+                    continue;
+                }
             }
         }
     }
+
+    for (let i = this.bullets.length - 1; i >= 0; i--) {
+        const bullet = this.bullets[i];
+
+        if (bullet.isEnemy) {
+            const dx = bullet.x - this.player.x;
+            const dy = bullet.y - this.player.y;
+
+            if (Math.sqrt(dx * dx + dy * dy) < 2.2) {
+                this.bullets.splice(i, 1);
+
+                if (this.player.hit() && this.player.lives <= 0) {
+                    this.endGame();
+                }
+            }
+        }
+    }
+
+    if (this.boss) {
+        const dx = this.boss.x - this.player.x;
+        const dy = this.boss.y - this.player.y;
+
+        if (Math.sqrt(dx * dx + dy * dy) < 28) {
+            if (this.player.hit() && this.player.lives <= 0) {
+                this.endGame();
+            }
+        }
+    }
+}
 
     endGame() {
         this.gameRunning = false;
@@ -706,9 +738,11 @@ if (this.laserMode) {
         document.querySelector('#gameOver h2').textContent = 'Игра окончена!';
         this.sound.playerDeath();
         
-        if (this.bgmElement) {
-            this.bgmElement.pause();
-        }
+        const bgm = document.getElementById('bgMusic');
+
+if (bgm) {
+    bgm.pause();
+}
     }
 
     drawUI() {
