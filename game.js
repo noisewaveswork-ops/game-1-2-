@@ -1,4 +1,4 @@
-// ---------- Звуковой менеджер (Web Audio API синтез) ----------
+// ---------- Звуковой менеджер ----------
 class SoundManager {
     constructor() {
         this.ctx = null;
@@ -6,12 +6,18 @@ class SoundManager {
         this.bgmElement = document.getElementById('bgMusic');
     }
 
-    init() {
+    async init() {
         if (this.initialized) return;
 
         try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
 
+            // iOS / Android resume
+            if (this.ctx.state === 'suspended') {
+                await this.ctx.resume();
+            }
+
+            // unlock audio
             const buf = this.ctx.createBuffer(1, 1, 22050);
             const src = this.ctx.createBufferSource();
 
@@ -19,94 +25,136 @@ class SoundManager {
             src.connect(this.ctx.destination);
             src.start(0);
 
-        } catch(e) {
-            console.warn('Web Audio API не поддерживается');
+        } catch (e) {
+            console.warn('Web Audio API не поддерживается', e);
         }
 
-        this.initialized = true;
-    }
-
-    if (this.ctx.state === 'suspended') {
-        await this.ctx.resume();
-    }
-
-    this.initialized = true;
-        if (this.initialized) return;
-        try {
-            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const buf = this.ctx.createBuffer(1, 1, 22050);
-            const src = this.ctx.createBufferSource();
-            src.buffer = buf;
-            src.connect(this.ctx.destination);
-            src.start(0);
-        } catch(e) {
-            console.warn('Web Audio API не поддерживается');
-        }
         this.initialized = true;
     }
 
     playTone(freq, duration, type = 'square', volume = 0.15) {
         if (!this.ctx) return;
+
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
+
         osc.type = type;
         osc.frequency.value = freq;
+
         gain.gain.setValueAtTime(volume, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+        gain.gain.exponentialRampToValueAtTime(
+            0.001,
+            this.ctx.currentTime + duration
+        );
+
         osc.connect(gain);
         gain.connect(this.ctx.destination);
+
         osc.start();
         osc.stop(this.ctx.currentTime + duration);
     }
 
     playNoise(duration, volume = 0.2) {
         if (!this.ctx) return;
+
         const bufferSize = this.ctx.sampleRate * duration;
-        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+
+        const buffer = this.ctx.createBuffer(
+            1,
+            bufferSize,
+            this.ctx.sampleRate
+        );
+
         const data = buffer.getChannelData(0);
+
         for (let i = 0; i < bufferSize; i++) {
             data[i] = Math.random() * 2 - 1;
         }
+
         const source = this.ctx.createBufferSource();
         source.buffer = buffer;
+
         const gain = this.ctx.createGain();
+
         gain.gain.setValueAtTime(volume, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+        gain.gain.exponentialRampToValueAtTime(
+            0.001,
+            this.ctx.currentTime + duration
+        );
+
         source.connect(gain);
         gain.connect(this.ctx.destination);
+
         source.start();
     }
 
-    playerShoot() { this.playTone(880, 0.05, 'square', 0.08); }
-    bossHit() { this.playNoise(0.05, 0.15); }
-    bomb() {
-        this.playNoise(0.5, 0.25);
-        if (this.ctx) setTimeout(() => this.playTone(80, 0.3, 'sawtooth', 0.2), 50);
-    }
-    playerDeath() { this.playTone(150, 0.8, 'sawtooth', 0.2); }
-    waveStart() {
-        this.playTone(880, 0.1, 'square', 0.1);
-        if (this.ctx) setTimeout(() => this.playTone(1100, 0.1, 'square', 0.1), 100);
-    }
-    bossAppear() {
-        this.playTone(200, 0.3, 'sawtooth', 0.15);
-        if (this.ctx) setTimeout(() => this.playTone(300, 0.5, 'sawtooth', 0.2), 200);
-    }
-    bossPhaseChange() {
-        this.playTone(600, 0.15, 'square', 0.1);
-        if (this.ctx) setTimeout(() => this.playTone(800, 0.15, 'square', 0.1), 150);
-        if (this.ctx) setTimeout(() => this.playTone(1000, 0.2, 'square', 0.12), 300);
-    }
-    pauseAll() {
-    if (this.bgmElement) {
-        this.bgmElement.pause();
-        this.bgmElement.currentTime = 0;
+    playerShoot() {
+        this.playTone(880, 0.05, 'square', 0.08);
     }
 
-    if (this.ctx) {
-        this.ctx.suspend(); // ключевая вещь для мобилок
+    bossHit() {
+        this.playNoise(0.05, 0.15);
     }
-}
+
+    bomb() {
+        this.playNoise(0.5, 0.25);
+
+        if (this.ctx) {
+            setTimeout(() => {
+                this.playTone(80, 0.3, 'sawtooth', 0.2);
+            }, 50);
+        }
+    }
+
+    playerDeath() {
+        this.playTone(150, 0.8, 'sawtooth', 0.2);
+    }
+
+    waveStart() {
+        this.playTone(880, 0.1, 'square', 0.1);
+
+        if (this.ctx) {
+            setTimeout(() => {
+                this.playTone(1100, 0.1, 'square', 0.1);
+            }, 100);
+        }
+    }
+
+    bossAppear() {
+        this.playTone(200, 0.3, 'sawtooth', 0.15);
+
+        if (this.ctx) {
+            setTimeout(() => {
+                this.playTone(300, 0.5, 'sawtooth', 0.2);
+            }, 200);
+        }
+    }
+
+    bossPhaseChange() {
+        this.playTone(600, 0.15, 'square', 0.1);
+
+        if (this.ctx) {
+            setTimeout(() => {
+                this.playTone(800, 0.15, 'square', 0.1);
+            }, 150);
+
+            setTimeout(() => {
+                this.playTone(1000, 0.2, 'square', 0.12);
+            }, 300);
+        }
+    }
+
+    pauseAll() {
+        if (this.bgmElement) {
+            this.bgmElement.pause();
+            this.bgmElement.currentTime = 0;
+        }
+
+        if (this.ctx) {
+            this.ctx.suspend();
+        }
+    }
 }
 
 // ---------- Основные классы ----------
@@ -142,12 +190,6 @@ this.lastShotTime = 0;
     }
 
     draw(ctx) {
-
-        this.ctx.fillStyle = '#7ab6ff';
-
-this.ctx.beginPath();
-this.ctx.arc(this.player.x, this.player.y, 2, 0, Math.PI * 2);
-this.ctx.fill();
         ctx.save();
         if (!this.invulnerable || Math.floor(Date.now() / 100) % 2) {
             if (this.image && this.image.complete && this.image.naturalWidth > 0) {
