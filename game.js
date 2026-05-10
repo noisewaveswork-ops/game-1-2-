@@ -7,6 +7,22 @@ class SoundManager {
     }
 
     init() {
+        async init() {
+
+    if (!this.ctx) {
+
+        this.ctx = new (
+            window.AudioContext ||
+            window.webkitAudioContext
+        )();
+    }
+
+    if (this.ctx.state === 'suspended') {
+        await this.ctx.resume();
+    }
+
+    this.initialized = true;
+}
         if (this.initialized) return;
         try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -91,8 +107,8 @@ class Player {
         this.x = x;
         this.y = y;
         this.image = image;
-        this.width = image ? image.width : 16;
-        this.height = image ? image.height : 16;
+        this.width = 32;
+this.height = 32;
         this.lives = 2;
         this.bombs = 3;
         this.score = 0;
@@ -118,6 +134,12 @@ this.lastShotTime = 0;
     }
 
     draw(ctx) {
+
+        this.ctx.fillStyle = '#7ab6ff';
+
+this.ctx.beginPath();
+this.ctx.arc(this.player.x, this.player.y, 2, 0, Math.PI * 2);
+this.ctx.fill();
         ctx.save();
         if (!this.invulnerable || Math.floor(Date.now() / 100) % 2) {
             if (this.image && this.image.complete && this.image.naturalWidth > 0) {
@@ -263,6 +285,90 @@ class HomingBullet extends Bullet {
 
 // ---------- Класс босса ----------
 class Hibachi {
+    phaseOne() {
+
+    if (this.timer % 6 === 0) {
+
+        const base = this.timer * 0.07;
+
+        for (let i = 0; i < 16; i++) {
+
+            const angle =
+                base +
+                (Math.PI * 2 / 16) * i;
+
+            const b = new Bullet(
+                this.x,
+                this.y,
+                angle,
+                2.8,
+                true
+            );
+
+            b.width = 8;
+            b.height = 8;
+            b.color = '#ff0022';
+
+            this.game.bullets.push(b);
+        }
+    }
+}
+
+phaseTwo() {
+
+    if (this.timer % 50 === 0) {
+
+        const aim = Math.atan2(
+            this.game.player.y - this.y,
+            this.game.player.x - this.x
+        );
+
+        for (let i = -8; i <= 8; i++) {
+
+            const b = new Bullet(
+                this.x,
+                this.y,
+                aim + i * 0.05,
+                5,
+                true
+            );
+
+            b.width = 5;
+            b.height = 20;
+            b.color = '#ffffff';
+
+            this.game.bullets.push(b);
+        }
+    }
+}
+
+phaseThree() {
+
+    if (this.timer % 3 === 0) {
+
+        const spin = this.timer * 0.15;
+
+        for (let i = 0; i < 3; i++) {
+
+            const angle =
+                spin +
+                i * (Math.PI * 2 / 3);
+
+            const b = new Bullet(
+                this.x,
+                this.y,
+                angle,
+                4,
+                true
+            );
+
+            b.width = 10;
+            b.height = 10;
+
+            this.game.bullets.push(b);
+        }
+    }
+}
 
     constructor(game) {
 
@@ -290,6 +396,9 @@ class Hibachi {
     }
 
     update() {
+        if (this.phase === 1) this.phaseOne();
+if (this.phase === 2) this.phaseTwo();
+if (this.phase === 3) this.phaseThree();
 
         this.timer++;
 
@@ -566,24 +675,33 @@ class Game {
     }
 
     startCountdown() {
-        document.getElementById('startScreen').classList.add('hidden');
-        document.getElementById('gameOver').classList.add('hidden');
-        this.player = new Player(200, 500, this.playerImage);
-        this.bullets = [];
-        this.boss = null;
-        this.gameTimer = 0;
-        this.laserMode = false;
-        this.laserKeyDown = false;
-        this.twoFingers = false;
-        this.gameRunning = false;
-        this.gameOver = false;
-        this.gameComplete = false;
-        this.gameStarted = true;
-        this.countdown = 3;
-        this.countdownTimer = 60;
-        this.countdownText = '3';
-    }
 
+    document.getElementById('startScreen').classList.add('hidden');
+    document.getElementById('gameOver').classList.add('hidden');
+
+    this.player = new Player(200, 500, this.playerImage);
+
+    this.bullets = [];
+
+    // ВОТ ЭТО ВАЖНО
+    this.boss = new Hibachi(this);
+
+    this.gameTimer = 0;
+
+    this.laserMode = false;
+    this.laserKeyDown = false;
+    this.twoFingers = false;
+
+    this.gameRunning = false;
+    this.gameOver = false;
+    this.gameComplete = false;
+
+    this.gameStarted = true;
+
+    this.countdown = 3;
+    this.countdownTimer = 60;
+    this.countdownText = '3';
+}
     useBomb() {
         if (this.player.useBomb()) {
             this.bullets = this.bullets.filter(b => !b.isEnemy);
@@ -936,4 +1054,4 @@ document.addEventListener('visibilitychange', () => {
         window.postMessage('pauseMusic', '*');
     }
 });
-const game = new Game(); 
+window.game = new Game();
