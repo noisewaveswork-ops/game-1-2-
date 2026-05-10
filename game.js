@@ -31,7 +31,6 @@ class SoundManager {
     }
 
     this.initialized = true;
-}
         if (this.initialized) return;
         try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
