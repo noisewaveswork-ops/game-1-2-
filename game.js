@@ -164,14 +164,14 @@ class Player {
         this.y = y;
         this.image = image;
         this.width = 32;
-this.height = 32;
+        this.height = 32;
         this.lives = 2;
         this.bombs = 3;
         this.score = 0;
         this.invulnerable = false;
         this.invulnerableTimer = 0;
         this.shootCooldown = 0;
-this.lastShotTime = 0;
+        this.lastShotTime = 0;
     }
 
     update(targetX, targetY) {
@@ -260,14 +260,13 @@ class Bullet {
     }
 
     update() {
+        if (this.customUpdate) {
+            this.customUpdate();
+        }
 
-    if (this.customUpdate) {
-        this.customUpdate();
+        this.x += Math.cos(this.angle) * this.speed;
+        this.y += Math.sin(this.angle) * this.speed;
     }
-
-    this.x += Math.cos(this.angle) * this.speed;
-    this.y += Math.sin(this.angle) * this.speed;
-}
 
     draw(ctx) {
         ctx.save();
@@ -336,191 +335,138 @@ class HomingBullet extends Bullet {
 // ---------- Класс босса ----------
 class Hibachi {
     phaseOne() {
-
-    if (this.timer % 6 === 0) {
-
-        const base = this.timer * 0.07;
-
-        for (let i = 0; i < 16; i++) {
-
-            const angle =
-                base +
-                (Math.PI * 2 / 16) * i;
-
-            const b = new Bullet(
-                this.x,
-                this.y,
-                angle,
-                2.8,
-                true
-            );
-
-            b.width = 8;
-            b.height = 8;
-            b.color = '#ff0022';
-
-            this.game.bullets.push(b);
+        if (this.timer % 6 === 0) {
+            const base = this.timer * 0.07;
+            for (let i = 0; i < 16; i++) {
+                const angle = base + (Math.PI * 2 / 16) * i;
+                const b = new Bullet(this.x, this.y, angle, 2.8, true);
+                b.width = 8;
+                b.height = 8;
+                b.color = '#ff0022';
+                this.game.bullets.push(b);
+            }
         }
     }
-}
 
-phaseTwo() {
-
-    if (this.timer % 50 === 0) {
-
-        const aim = Math.atan2(
-            this.game.player.y - this.y,
-            this.game.player.x - this.x
-        );
-
-        for (let i = -8; i <= 8; i++) {
-
-            const b = new Bullet(
-                this.x,
-                this.y,
-                aim + i * 0.05,
-                5,
-                true
+    phaseTwo() {
+        if (this.timer % 50 === 0) {
+            const aim = Math.atan2(
+                this.game.player.y - this.y,
+                this.game.player.x - this.x
             );
-
-            b.width = 5;
-            b.height = 20;
-            b.color = '#ffffff';
-
-            this.game.bullets.push(b);
+            for (let i = -8; i <= 8; i++) {
+                const b = new Bullet(this.x, this.y, aim + i * 0.05, 5, true);
+                b.width = 5;
+                b.height = 20;
+                b.color = '#ffffff';
+                this.game.bullets.push(b);
+            }
         }
     }
-}
 
-phaseThree() {
-
-    if (this.timer % 3 === 0) {
-
-        const spin = this.timer * 0.15;
-
-        for (let i = 0; i < 3; i++) {
-
-            const angle =
-                spin +
-                i * (Math.PI * 2 / 3);
-
-            const b = new Bullet(
-                this.x,
-                this.y,
-                angle,
-                4,
-                true
-            );
-
-            b.width = 10;
-            b.height = 10;
-
-            this.game.bullets.push(b);
+    phaseThree() {
+        if (this.timer % 3 === 0) {
+            const spin = this.timer * 0.15;
+            for (let i = 0; i < 3; i++) {
+                const angle = spin + i * (Math.PI * 2 / 3);
+                const b = new Bullet(this.x, this.y, angle, 4, true);
+                b.width = 10;
+                b.height = 10;
+                this.game.bullets.push(b);
+            }
         }
     }
-}
 
     constructor(game) {
-
         this.game = game;
-
         this.x = 200;
         this.y = -120;
-
         this.targetY = 120;
-
         this.timer = 0;
-
         this.entered = false;
-
         this.maxHealth = 5000;
         this.health = this.maxHealth;
-
         this.phase = 0;
-
         this.moveTargetX = 200;
-
         this.auraRotation = 0;
-
         this.dead = false;
     }
 
     update() {
         if (this.phase === 1) this.phaseOne();
-if (this.phase === 2) this.phaseTwo();
-if (this.phase === 3) this.phaseThree();
+        if (this.phase === 2) this.phaseTwo();
+        if (this.phase === 3) this.phaseThree();
 
         this.timer++;
-
         this.auraRotation += 0.02;
 
         // Entrance
         if (!this.entered) {
-
             this.y += (this.targetY - this.y) * 0.04;
-
             if (Math.abs(this.y - this.targetY) < 1) {
-
                 this.entered = true;
                 this.timer = 0;
                 this.phase = 1;
-
                 this.game.sound.bossAppear();
             }
-
             return;
         }
 
         // Movement
         this.x += (this.moveTargetX - this.x) * 0.015;
-
         if (this.timer % 180 === 0) {
             this.moveTargetX = 80 + Math.random() * 240;
         }
 
         const hp = this.health / this.maxHealth;
-
         if (hp < 0.75 && this.phase === 1) {
             this.phase = 2;
             this.timer = 0;
             this.game.sound.bossPhaseChange();
         }
-
         if (hp < 0.45 && this.phase === 2) {
             this.phase = 3;
             this.timer = 0;
             this.game.sound.bossPhaseChange();
         }
+    }
 
-}
     draw(ctx) {
-    ctx.save();
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.fillStyle = '#ff0023';
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#ff0023';
+        ctx.beginPath();
+        ctx.arc(0, 0, 35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
 
-    ctx.translate(this.x, this.y);
-
-    ctx.fillStyle = '#ff0023';
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = '#ff0023';
-
-    ctx.beginPath();
-    ctx.arc(0, 0, 35, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
+    hit(damage) {
+        this.health -= damage;
+        return this.health <= 0;
+    }
 }
 
-hit(damage) {
-    this.health -= damage;
-    return this.health <= 0;
-}
-}
 // ---------- Главный класс игры ----------
 class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
-        this.canvas.width = 400;
-        this.canvas.height = 600;
+        
+        // Базовая игровая область
+        this.gameWidth = 400;
+        this.gameHeight = 600;
+        
+        // Устанавливаем начальный размер канваса
+        this.resizeCanvas();
+        
+        // Слушатель изменения размера окна
+        window.addEventListener('resize', () => this.resizeCanvas());
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => this.resizeCanvas(), 100);
+        });
 
         this.isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
         this.showCorrectControls();
@@ -584,15 +530,36 @@ class Game {
         requestAnimationFrame((timestamp) => this.gameLoop(timestamp));
     }
 
-    
-
-    
-
-    spawnBoss() {
-        this.boss = new Hibachi(this);
+    resizeCanvas() {
+        const container = this.canvas.parentElement;
+        const maxWidth = container ? container.clientWidth : window.innerWidth;
+        const maxHeight = window.innerHeight;
+        
+        // Вычисляем масштаб, сохраняя пропорции 400:600
+        const scaleX = maxWidth / this.gameWidth;
+        const scaleY = maxHeight / this.gameHeight;
+        const scale = Math.min(scaleX, scaleY, 1); // Не увеличиваем больше оригинального размера
+        
+        // Устанавливаем размер канваса в CSS
+        this.canvas.style.width = (this.gameWidth * scale) + 'px';
+        this.canvas.style.height = (this.gameHeight * scale) + 'px';
+        
+        // Внутреннее разрешение канваса остается 400x600
+        this.canvas.width = this.gameWidth;
+        this.canvas.height = this.gameHeight;
+        
+        // Сохраняем масштаб для конвертации координат
+        this.scale = scale;
     }
 
-    
+    // Конвертация координат мыши/тача в игровые координаты
+    getGameCoordinates(clientX, clientY) {
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+            x: (clientX - rect.left) * (this.gameWidth / rect.width),
+            y: (clientY - rect.top) * (this.gameHeight / rect.height)
+        };
+    }
 
     showCorrectControls() {
         document.getElementById('desktopControls').classList.toggle('hidden', this.isMobile);
@@ -611,16 +578,11 @@ class Game {
 
     setupEventListeners() {
         window.addEventListener('mousemove', (e) => {
-    if (this.isMobile) return;
-
-    const rect = this.canvas.getBoundingClientRect();
-
-    const scaleX = this.canvas.width / rect.width;
-    const scaleY = this.canvas.height / rect.height;
-
-    this.mouseX = (e.clientX - rect.left) * scaleX;
-    this.mouseY = (e.clientY - rect.top) * scaleY;
-});
+            if (this.isMobile) return;
+            const coords = this.getGameCoordinates(e.clientX, e.clientY);
+            this.mouseX = coords.x;
+            this.mouseY = coords.y;
+        });
 
         window.addEventListener('keydown', (e) => {
             if (e.code === 'KeyZ') this.laserKeyDown = true;
@@ -638,12 +600,9 @@ class Game {
             this.twoFingers = touches.length >= 2;
             this.touchStartFingers = touches.length;
             
-            const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.canvas.width / rect.width;
-            const scaleY = this.canvas.height / rect.height;
-            const touch = touches[0];
-            const tx = (touch.clientX - rect.left) * scaleX;
-            const ty = (touch.clientY - rect.top) * scaleY;
+            const coords = this.getGameCoordinates(touches[0].clientX, touches[0].clientY);
+            const tx = coords.x;
+            const ty = coords.y;
             
             if (this.isMobile) {
                 const bombIndex = this.isTapOnBomb(tx, ty);
@@ -714,12 +673,9 @@ class Game {
 
     updateMobilePosition(touches) {
         if (touches.length === 0) return;
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.canvas.width / rect.width;
-        const scaleY = this.canvas.height / rect.height;
-        const touch = touches[0];
-        let tx = (touch.clientX - rect.left) * scaleX;
-        let ty = (touch.clientY - rect.top) * scaleY;
+        const coords = this.getGameCoordinates(touches[0].clientX, touches[0].clientY);
+        let tx = coords.x;
+        let ty = coords.y;
         ty = Math.max(20, ty - 80);
         this.player.update(tx, ty);
         this.mouseX = tx;
@@ -727,33 +683,29 @@ class Game {
     }
 
     startCountdown() {
+        document.getElementById('startScreen').classList.add('hidden');
+        document.getElementById('gameOver').classList.add('hidden');
 
-    document.getElementById('startScreen').classList.add('hidden');
-    document.getElementById('gameOver').classList.add('hidden');
+        this.player = new Player(200, 500, this.playerImage);
+        this.bullets = [];
+        this.boss = new Hibachi(this);
+        this.gameTimer = 0;
 
-    this.player = new Player(200, 500, this.playerImage);
+        this.laserMode = false;
+        this.laserKeyDown = false;
+        this.twoFingers = false;
 
-    this.bullets = [];
+        this.gameRunning = false;
+        this.gameOver = false;
+        this.gameComplete = false;
 
-    // ВОТ ЭТО ВАЖНО
-    this.boss = new Hibachi(this);
+        this.gameStarted = true;
 
-    this.gameTimer = 0;
+        this.countdown = 3;
+        this.countdownTimer = 60;
+        this.countdownText = '3';
+    }
 
-    this.laserMode = false;
-    this.laserKeyDown = false;
-    this.twoFingers = false;
-
-    this.gameRunning = false;
-    this.gameOver = false;
-    this.gameComplete = false;
-
-    this.gameStarted = true;
-
-    this.countdown = 3;
-    this.countdownTimer = 60;
-    this.countdownText = '3';
-}
     useBomb() {
         if (this.player.useBomb()) {
             this.bullets = this.bullets.filter(b => !b.isEnemy);
@@ -778,10 +730,9 @@ class Game {
         this.sound.waveStart();
         
         const bgm = document.getElementById('bgMusic');
-
-if (bgm) {
-    bgm.pause();
-}
+        if (bgm) {
+            bgm.pause();
+        }
     }
 
     update() {
@@ -806,26 +757,25 @@ if (bgm) {
 
         this.gameTimer++;
 
-
         this.laserMode = this.laserKeyDown || this.twoFingers;
 
         const now = performance.now();
 
-if (!this.laserMode) {
-    if (now - this.player.lastShotTime > 120) {
-        this.bullets.push(new Bullet(this.player.x, this.player.y - 15, -Math.PI / 2, 9, false));
-        this.player.lastShotTime = now;
-        this.sound.playerShoot();
-    }
-}
+        if (!this.laserMode) {
+            if (now - this.player.lastShotTime > 120) {
+                this.bullets.push(new Bullet(this.player.x, this.player.y - 15, -Math.PI / 2, 9, false));
+                this.player.lastShotTime = now;
+                this.sound.playerShoot();
+            }
+        }
 
-if (this.laserMode) {
-    if (now - this.player.lastShotTime > 200) {
-        this.bullets.push(new HomingBullet(this.player.x, this.player.y - 5, this));
-        this.player.lastShotTime = now;
-        this.sound.playerShoot();
-    }
-}
+        if (this.laserMode) {
+            if (now - this.player.lastShotTime > 200) {
+                this.bullets.push(new HomingBullet(this.player.x, this.player.y - 5, this));
+                this.player.lastShotTime = now;
+                this.sound.playerShoot();
+            }
+        }
         this.player.update(this.mouseX, this.mouseY);
 
         if (this.boss) {
@@ -839,66 +789,61 @@ if (this.laserMode) {
 
         this.bullets.forEach(b => b.update());
         this.bullets = this.bullets.filter(b => !b.isOffScreen());
-
-        
         
         this.checkCollisions();
-        }
+    }
 
     checkCollisions() {
-    for (let i = this.bullets.length - 1; i >= 0; i--) {
-        const bullet = this.bullets[i];
+        for (let i = this.bullets.length - 1; i >= 0; i--) {
+            const bullet = this.bullets[i];
 
-        if (!bullet.isEnemy) {
-            if (this.boss) {
-                const dx = bullet.x - this.boss.x;
-                const dy = bullet.y - this.boss.y;
+            if (!bullet.isEnemy) {
+                if (this.boss) {
+                    const dx = bullet.x - this.boss.x;
+                    const dy = bullet.y - this.boss.y;
 
-                if (Math.sqrt(dx * dx + dy * dy) < 40) {
-                    this.bullets.splice(i, 1);
+                    if (Math.sqrt(dx * dx + dy * dy) < 40) {
+                        this.bullets.splice(i, 1);
+                        this.sound.bossHit();
+                        this.boss.health -= bullet.damage || 1;
 
-                    this.sound.bossHit();
-
-                    this.boss.health -= bullet.damage || 1;
-
-                    if (this.boss.health <= 0) {
-                        this.completeGame();
+                        if (this.boss.health <= 0) {
+                            this.completeGame();
+                        }
+                        continue;
                     }
-
-                    continue;
                 }
             }
         }
-    }
 
-    for (let i = this.bullets.length - 1; i >= 0; i--) {
-        const bullet = this.bullets[i];
+        for (let i = this.bullets.length - 1; i >= 0; i--) {
+            const bullet = this.bullets[i];
 
-        if (bullet.isEnemy) {
-            const dx = bullet.x - this.player.x;
-            const dy = bullet.y - this.player.y;
+            if (bullet.isEnemy) {
+                const dx = bullet.x - this.player.x;
+                const dy = bullet.y - this.player.y;
 
-            if (Math.sqrt(dx * dx + dy * dy) < 3) {
-                this.bullets.splice(i, 1);
+                if (Math.sqrt(dx * dx + dy * dy) < 3) {
+                    this.bullets.splice(i, 1);
 
+                    if (this.player.hit() && this.player.lives <= 0) {
+                        this.endGame();
+                    }
+                }
+            }
+        }
+
+        if (this.boss) {
+            const dx = this.boss.x - this.player.x;
+            const dy = this.boss.y - this.player.y;
+
+            if (Math.sqrt(dx * dx + dy * dy) < 12) {
                 if (this.player.hit() && this.player.lives <= 0) {
                     this.endGame();
                 }
             }
         }
     }
-
-    if (this.boss) {
-        const dx = this.boss.x - this.player.x;
-        const dy = this.boss.y - this.player.y;
-
-        if (Math.sqrt(dx * dx + dy * dy) < 12) {
-            if (this.player.hit() && this.player.lives <= 0) {
-                this.endGame();
-            }
-        }
-    }
-}
 
     endGame() {
         this.gameRunning = false;
@@ -909,46 +854,41 @@ if (this.laserMode) {
         this.sound.playerDeath();
         
         const bgm = document.getElementById('bgMusic');
-
-if (bgm) {
-    bgm.pause();
-}
+        if (bgm) {
+            bgm.pause();
+        }
     }
 
     drawUI() {
         this.bombIconPositions = [];
 
         const UI = {
-
-    panelY: 0,
-    panelHeight: 600,
-
-    lives: {
-        x: 30,
-        y: 45,
-        gap: 8,
-        size: 20
-    },
-
-    score: {
-        x: 370,
-        y: 50,
-        size: 14,
-        color: '#d9d9d9'
-    },
-
-    bombs: this.isMobile ? {
-        startX: 370,
-        startY: 270,
-        gap: 8,
-        size: 24
-    } : {
-        startX: 140,
-        startY: 540,
-        gap: 15,
-        size: 30
-    }
-};
+            panelY: 0,
+            panelHeight: 600,
+            lives: {
+                x: 30,
+                y: 45,
+                gap: 8,
+                size: 20
+            },
+            score: {
+                x: 370,
+                y: 50,
+                size: 14,
+                color: '#d9d9d9'
+            },
+            bombs: this.isMobile ? {
+                startX: 370,
+                startY: 270,
+                gap: 8,
+                size: 24
+            } : {
+                startX: 140,
+                startY: 540,
+                gap: 15,
+                size: 30
+            }
+        };
         const ctx = this.ctx;
         ctx.save();
 
@@ -980,7 +920,6 @@ if (bgm) {
         ctx.fillStyle = UI.score.color;
         ctx.textAlign = 'right';
         ctx.fillText(`${this.player.score}`, UI.score.x, UI.panelY + UI.score.y);
-
 
         const bv = UI.bombs;
         if (this.isMobile) {
@@ -1048,22 +987,16 @@ if (bgm) {
 
         if (this.countdown > 0 && this.countdownText) {
             this.ctx.save();
-
-this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
-this.ctx.fillRect(0, 0, 400, 600);
-
-this.ctx.font = '700 110px "Unbounded", sans-serif';
-this.ctx.textAlign = 'center';
-this.ctx.textBaseline = 'middle';
-
-this.ctx.fillStyle = '#d9d9d9';
-
-this.ctx.shadowBlur = 20;
-this.ctx.shadowColor = '#ff0023';
-
-this.ctx.fillText(this.countdownText, 200, 300);
-
-this.ctx.restore();
+            this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            this.ctx.fillRect(0, 0, 400, 600);
+            this.ctx.font = '700 110px "Unbounded", sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillStyle = '#d9d9d9';
+            this.ctx.shadowBlur = 20;
+            this.ctx.shadowColor = '#ff0023';
+            this.ctx.fillText(this.countdownText, 200, 300);
+            this.ctx.restore();
         }
     }
 
@@ -1083,6 +1016,7 @@ this.ctx.restore();
         requestAnimationFrame((nextTimestamp) => this.gameLoop(nextTimestamp));
     }
 }
+
 window.addEventListener('message', (event) => {
     if (event.data === 'pauseMusic') {
         const bgm = document.getElementById('bgMusic');
@@ -1106,4 +1040,5 @@ document.addEventListener('visibilitychange', () => {
         window.postMessage('pauseMusic', '*');
     }
 });
+
 window.game = new Game();
