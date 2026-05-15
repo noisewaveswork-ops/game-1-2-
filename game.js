@@ -336,7 +336,7 @@ class HomingBullet extends Bullet {
 class Hibachi {
     phaseOne() {
         if (this.timer % 6 === 0) {
-            const base = this.timer * 0.07;
+            const base = this.timer * 0.15;
             for (let i = 0; i < 16; i++) {
                 const angle = base + (Math.PI * 2 / 16) * i;
                 const b = new Bullet(this.x, this.y, angle, 2.8, true);
