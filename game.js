@@ -1271,6 +1271,9 @@ class Game {
     }
 
     update() {
+        if (!this.isMobile) {
+            this.player.update(this.mouseX, this.mouseY);
+            }
         if (this.countdown > 0) {
             this.countdownTimer--;
             if (this.countdownTimer <= 0) {
