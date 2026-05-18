@@ -1626,4 +1626,8 @@ document.addEventListener('visibilitychange', () => {
         window.postMessage('pauseMusic', '*');
     }
 });
-const game = new Game(); 
+
+
+window.addEventListener('DOMContentLoaded', () => {
+    window.game = new Game();
+});
