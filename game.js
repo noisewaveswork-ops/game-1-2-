@@ -617,7 +617,7 @@ class Game {
         this.canvas.width = 400;
         this.canvas.height = 600;
 
-        this.isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        this.isMobile = window.matchMedia("(pointer: coarse)").matches;
         this.showCorrectControls();
 
         this.sound = new SoundManager();
@@ -1101,7 +1101,6 @@ class Game {
 
     setupEventListeners() {
         this.canvas.addEventListener('mousemove', (e) => {
-            if (this.isMobile) return;
             const rect = this.canvas.getBoundingClientRect();
             const scaleX = this.canvas.width / rect.width;
             const scaleY = this.canvas.height / rect.height;
