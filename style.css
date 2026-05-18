@@ -34,6 +34,8 @@ body {
     display: block;
     image-rendering: pixelated;
     background: #000;
+
+    pointer-events: auto;
 }
 
 .hidden {
@@ -110,4 +112,10 @@ button:hover {
 
 #startScreen, #gameOver {
     pointer-events: auto;
+}
+
+
+#startScreen.hidden,
+#gameOver.hidden {
+    pointer-events: none;
 }
