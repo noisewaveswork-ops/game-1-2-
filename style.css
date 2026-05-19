@@ -1,5 +1,4 @@
-html,
-body {
+html, body {
     margin: 0;
     padding: 0;
     background: #000;
@@ -15,27 +14,32 @@ body {
 
 #gameContainer {
     position: relative;
-    width: 400px;
-    height: 600px;
+
+    width: 100%;
+    max-width: 400px;
+
+    aspect-ratio: 2 / 3;
+
     overflow: hidden;
     box-shadow: 0 0 30px rgba(255, 0, 35, 0.35);
 }
 
-/* ВАЖНО */
 #gameCanvas {
     position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 1;
+    inset: 0;
 
-    width: 400px;
-    height: 600px;
+    width: 100%;
+    height: 100%;
 
     display: block;
     image-rendering: pixelated;
     background: #000;
 
     pointer-events: auto;
+}
+
+canvas {
+    touch-action: none;
 }
 
 .hidden {
